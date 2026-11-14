@@ -160,7 +160,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='19';
+const APP_VERSAO='20';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -267,6 +267,7 @@ document.addEventListener('change',e=>{const i=e.target;if(i.tagName==='SELECT'&
 const TELAS={menu,estoque,entrada:()=>formMov('ENTRADA'),saida:()=>formMov('SAIDA'),morte:()=>formMov('MORTE'),transf:()=>formMov('TRANSF'),despesas,faturas,historico,gestao,arrend:telaLocais,lotes:telaLocais};
 const TITULOS={menu:'Parcerias',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',arrend:'Parceiros e Lotes',lotes:'Parceiros e Lotes'};
 let TELA='menu',VOLTA=null;
+function cancelarForm(){if(VOLTA)return voltar();go(TELA);scrollTo(0,0)}
 function voltar(){const md=document.querySelector('.modal,.pk');if(md){md.remove();return}if(VOLTA){const f=VOLTA;VOLTA=null;f();scrollTo(0,0);return}go('menu')}
 const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'💲',faturas:'🧾',historico:'📋',gestao:'⚙️',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
 const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#ae8a63',lotes:'#b0782a',gestao:'#11253d'};
@@ -338,10 +339,9 @@ function formMov(tipo,ed){
     <div><label>Valor total (R$)</label><input type="text" inputmode="numeric" class="moeda" id="fValor"></div></div>
     <div class="mut" id="fMedio" style="margin-top:8px"></div>
     <label>Observação</label><input id="fObs">`}
-    <button class="bt" onclick="salvarMov('${tipo}')">${EDIT?'Salvar alteração':'Registrar '+({ENTRADA:'entrada',SAIDA:'saída',MORTE:'morte',TRANSF:'transferência'})[tipo]}</button>${EDIT?`<button class="bt sec" onclick="formMov('${tipo}')">Cancelar edição</button>`:''}
+    <div class="btRow"><button class="bt verm" onclick="cancelarForm()">Cancelar</button><button class="bt verde" onclick="salvarMov('${tipo}')">Salvar</button></div>
   </div>
   ${ehT?'<div class="hint">A transferência baixa do lote de origem e soma no destino na mesma data. Nas faturas, cada parceria cobra só os dias em que o animal esteve lá.</div>':''}
-  ${tipo==='SAIDA'?'<div class="hint">Na transferência, para fazenda própria (Paraíso, JK, Jurema) o gado só sai deste sistema. Para outro parceiro, ele entra no lote de destino. Morte tem botão próprio (pede brinco e foto).</div>':''}
   <div class="card"><h3>Últimos lançamentos</h3><div id="ult"></div></div>`;
   if(tipo==='ENTRADA'){const orUpd=()=>{$('#fOrBox').hidden=$('#fSub').value!=='TRANSFERÊNCIA DE FAZENDA PRÓPRIA'};$('#fSub').onchange=orUpd;orUpd()}
   if(tipo==='SAIDA'){
@@ -398,8 +398,10 @@ function salvarMov(tipo){
 function listaMov(el,ms){
   if(!ms.length){el.innerHTML='<p class="mut">Nenhum lançamento.</p>';return}
   const T={ENTRADA:['E','Entrada'],SAIDA:['S','Saída'],MORTE:['M','Morte'],TRANSF:['T','Transf.']};
-  el.innerHTML=ms.map(m=>`<div class="list-it"><div><span class="tag ${T[m.tipo][0]}">${T[m.tipo][1]}</span> <b>${m.qtd} cab</b> · ${fmtD(m.data)}<br>
-   <span class="mut">${nomeLote(m.loteId)}${m.tipo==='TRANSF'?' → '+nomeLote(m.loteDest):''}${m.tipo==='SAIDA'&&m.destino?' → '+m.destino:''}${m.origem?' · de '+m.origem:''}${m.peso?' · '+N(m.peso)+' kg ('+N(m.peso/m.qtd)+' méd)':''}${m.subtipo?' · '+m.subtipo:''}${m.precoArroba?' · '+R$(m.precoArroba)+'/@':''}${m.valor?' · '+R$(m.valor):''}${m.brinco?' · brinco '+m.brinco:''}${m.obs?' · '+m.obs:''}</span>
+  el.innerHTML=ms.map(m=>`<div class="list-it"><div>${(()=>{const l=loteDe(m.loteId)||{};const ex=[m.tipo==='TRANSF'?'→ '+nomeLote(m.loteDest):'',m.tipo==='SAIDA'&&m.destino?'→ '+m.destino:'',m.origem?'de '+m.origem:'',m.peso?N(m.peso)+' kg ('+N(m.peso/m.qtd)+' méd)':'',m.precoArroba?R$(m.precoArroba)+'/@':'',m.valor?R$(m.valor):'',m.brinco?'brinco '+m.brinco:'',m.obs||''].filter(Boolean).join(' · ');
+   return `<b>${fmtD(m.data)}</b> - <span class="tag ${T[m.tipo][0]}">${T[m.tipo][1]}</span>${m.subtipo?' - <b>'+m.subtipo+'</b>':''}<br>
+   ${arrDe(l.arrId).nome||'—'} - ${l.prop||'—'}<br>
+   <b>${m.qtd} cab</b> - ${catLote(l)||m.categoria||sufLote(l)||'sem categoria'}${ex?`<br><span class="mut">${ex}</span>`:''}`})()}
    ${m.foto?`<img src="${m.foto}" class="foto">`:''}</div>
    <div class="acoes"><button class="icb" title="Editar" onclick="editarMov('${m.id}')">✏️</button><button class="icb del" title="Excluir" onclick="excluirMov('${m.id}')">✕</button></div></div>`).join('');
 }
@@ -491,7 +493,7 @@ function despesas(){
   <label>Lote (opcional)</label><select id="dL"></select>
   <label>Descrição</label><input id="dDs">
   <div class="row"><div><label>Valor (R$)</label><input type="text" inputmode="numeric" class="moeda" id="dV"></div><div><label>Situação</label><select id="dS"><option value="">SELECIONE</option><option>PAGO</option><option>A PAGAR</option></select></div></div>
-  <input type="hidden" id="dId"><button class="bt" id="dBt" onclick="salvarDesp()">Registrar despesa</button><button class="bt sec" id="dCanc" hidden onclick="despesas()">Cancelar edição</button></div>
+  <input type="hidden" id="dId"><div class="btRow"><button class="bt verm" id="dCanc" onclick="cancelarForm()">Cancelar</button><button class="bt verde" id="dBt" onclick="salvarDesp()">Salvar</button></div></div>
   <div class="card fBox">${filtroMes('dfM','Mês',hoje().slice(0,7))}
   ${filtroSel('dfS','Situação',[['','Todas'],['A PAGAR','A pagar'],['PAGO','Pago']],'')}</div><div class="card"><div id="dLst"></div></div>`;
   const lotes=()=>{$('#dL').innerHTML='<option value="">— Parceria toda —</option>'+DB.lotes.filter(l=>l.arrId===$('#dA').value).map(l=>optLote(l)).join('')};
@@ -500,7 +502,7 @@ function despesas(){
 function salvarDesp(){const v=mv('dV');if(!$('#dT').value)return toast('Selecione o tipo');if(!$('#dA').value)return toast('Selecione o parceiro');if(!v)return toast('Informe o valor');if(!$('#dS').value)return toast('Selecione a situação');
   const old=$('#dId').value&&DB.desp.find(x=>x.id===$('#dId').value)||{};
   put('desp',{...old,id:old.id||nid('D'),data:$('#dD').value,tipo:$('#dT').value,arrId:$('#dA').value,loteId:$('#dL').value,desc:$('#dDs').value.trim(),valor:v,status:$('#dS').value});toast(old.id?'Despesa alterada ✓':'Despesa registrada ✓');despesas()}
-function editarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;VOLTA=()=>go('despesas');const i=$('#dD');i.value=d.data;syncData(i);$('#dT').value=d.tipo;$('#dA').value=d.arrId;$('#dA').onchange();$('#dL').value=d.loteId||'';$('#dDs').value=d.desc||'';smv('dV',d.valor);$('#dS').value=d.status;$('#dId').value=d.id;$('#dBt').textContent='Salvar alteração';$('#dCanc').hidden=false;scrollTo(0,0)}
+function editarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;VOLTA=()=>go('despesas');const i=$('#dD');i.value=d.data;syncData(i);$('#dT').value=d.tipo;$('#dA').value=d.arrId;$('#dA').onchange();$('#dL').value=d.loteId||'';$('#dDs').value=d.desc||'';smv('dV',d.valor);$('#dS').value=d.status;$('#dId').value=d.id;scrollTo(0,0)}
 function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value;const ds=DB.desp.filter(d=>(!ym||d.data.startsWith(ym))&&(!s||d.status===s)).sort((a,b)=>b.data.localeCompare(a.data));
   const tot=ds.reduce((a,d)=>a+d.valor,0),ap=ds.filter(d=>d.status==='A PAGAR').reduce((a,d)=>a+d.valor,0);
   $('#dLst').innerHTML=(ds.map(d=>`<div class="list-it"><div><b>${R$(d.valor)}</b> · ${fmtD(d.data)} <span class="tag ${d.status==='PAGO'?'E':'M'}">${d.status}</span><br><span class="mut">${d.tipo==='ARRENDAMENTO'?'PARCERIA':d.tipo} · ${arrDe(d.arrId).nome||''}${d.loteId?' · '+loteDe(d.loteId).nome:''}${d.desc?' · '+d.desc:''}</span></div>

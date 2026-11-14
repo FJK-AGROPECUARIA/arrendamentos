@@ -9,7 +9,7 @@
 const TABELAS = {
   arr:   { aba: 'Arrendamentos', cols: ['id', 'nome', 'cidade', 'ativo'] },
   lotes: { aba: 'Lotes',         cols: ['id', 'arrId', 'nome', 'prop', 'valorCab', 'salario', 'ativo'] },
-  movs:  { aba: 'Movimentos',    cols: ['id', 'data', 'tipo', 'loteId', 'loteDest', 'qtd', 'sexo', 'peso', 'valor', 'brinco', 'foto', 'obs', 'criadoEm', 'subtipo', 'precoArroba', 'divArroba'] },
+  movs:  { aba: 'Movimentos',    cols: ['id', 'data', 'tipo', 'loteId', 'loteDest', 'qtd', 'sexo', 'peso', 'valor', 'brinco', 'foto', 'obs', 'criadoEm', 'subtipo', 'precoArroba', 'divArroba', 'destino'] },
   desp:  { aba: 'Despesas',      cols: ['id', 'data', 'tipo', 'arrId', 'loteId', 'desc', 'valor', 'status', 'ref', 'pagoEm', 'criadoEm'] },
   props: { aba: 'Proprietarios', cols: ['id', 'nome'] }
 };

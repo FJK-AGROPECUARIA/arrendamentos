@@ -82,6 +82,13 @@ tr.tot td{font-weight:800;background:var(--chip);border-bottom:0}
 .pin{font-size:28px;letter-spacing:12px;margin:8px 0 12px;min-height:38px}
 .tec{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .tec button{padding:16px;font-size:1.4rem;font-weight:700;border:2px solid var(--line);border-radius:12px;background:var(--bg)}
+.gNavData{display:flex;align-items:stretch;gap:6px}
+.gSeta{flex:0 0 46px;padding:0;font-size:1.1rem;background:var(--accent);color:#fff;border:2px solid var(--accent);border-radius:10px;cursor:pointer}
+.gDataBox{flex:1;min-width:0;position:relative;margin:0;display:flex;align-items:center;justify-content:center;background:var(--bg);border:2px solid var(--line);border-radius:10px;min-height:48px;padding:0 6px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--fg);font-size:1.05rem}
+.gDataBox span{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gDataBox i{font-style:normal;font-size:.75rem;background:var(--lima);color:var(--fg);border-radius:99px;padding:1px 7px;margin-left:6px}
+.gDataBox input{position:absolute;inset:0;opacity:0;width:100%;height:100%;border:0;padding:0;margin:0;min-height:0;cursor:pointer}
+.gHoje{display:inline-block;margin-top:6px;border:0;border-radius:8px;background:#2e7d32;color:#fff;font:inherit;font-size:.8rem;font-weight:700;padding:4px 12px;cursor:pointer}
 a{color:var(--accent)}
 </style>
 </head>
@@ -123,7 +130,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='1';
+const APP_VERSAO='3';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -147,8 +154,9 @@ async function enviar(){
   }catch(e){online=false}
   enviando=false;status();
 }
-const NUM=['qtd','peso','valor','valorCab','salario'];
-function normal(reg){for(const k in reg){if(NUM.includes(k)&&reg[k]!==''&&reg[k]!=null)reg[k]=+reg[k];if(k==='ativo')reg[k]=reg[k]===true||reg[k]==='true'}return reg}
+const NUM=['qtd','peso','valor','valorCab','salario','precoArroba','divArroba'];
+const SUB_SAI=['VENDA','TRANSFERÊNCIA P/ FAZENDA PRÓPRIA','ABATE / CONSUMO','OUTROS'],SUB_ENT=['COMPRA','TRANSFERÊNCIA DE FAZENDA PRÓPRIA','NASCIMENTO','OUTROS'];
+function normal(reg){for(const k of ['data','pagoEm'])if(reg[k])reg[k]=ymd(reg[k]);for(const k in reg){if(NUM.includes(k)&&reg[k]!==''&&reg[k]!=null)reg[k]=+reg[k];if(k==='ativo')reg[k]=reg[k]===true||reg[k]==='true'}return reg}
 async function carregar(){
   if(!api())return status();await enviar();if(FILA.length)return;
   try{const r=await fetch(api()+'?acao=tudo');const j=await r.json();if(!j.ok)throw 0;online=true;
@@ -165,7 +173,8 @@ addEventListener('online',enviar);setInterval(enviar,60000);
 
 /* ===================== UTILITÁRIOS ===================== */
 const $=s=>document.querySelector(s);
-const fmtD=iso=>{if(!iso)return'';const[a,m,d]=iso.split('-');return d+'/'+m+'/'+a};
+const ymd=v=>{if(!v)return'';v=String(v);if(/^\d{4}-\d\d-\d\d/.test(v))return v.slice(0,10);const x=new Date(v);if(isNaN(x))return'';return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const fmtD=iso=>{iso=ymd(iso);if(!iso)return'';const[a,m,d]=iso.split('-');return d+'/'+m+'/'+a};
 const hoje=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const R$=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const N=v=>(+v||0).toLocaleString('pt-BR',{maximumFractionDigits:2});
@@ -185,6 +194,25 @@ function optLotes(sel,soAtivos=true){
   return DB.arr.map(a=>{const ls=DB.lotes.filter(l=>l.arrId===a.id&&(!soAtivos||l.ativo));if(!ls.length)return'';
     return `<optgroup label="${a.nome} - ${a.cidade}">`+ls.map(l=>`<option value="${l.id}" ${l.id===sel?'selected':''}>${l.nome} · ${l.prop} · ${saldo(l.id)} cab</option>`).join('')+'</optgroup>'}).join('');
 }
+
+/* ===================== DATAS (padrão FJK: dd/mm/aaaa, comprido, ◀ ▶ e toque abre o calendário) ===================== */
+const SEMN=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],MESN=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const somaDias=(k,n)=>{const[y,m,d]=k.split('-').map(Number);const x=new Date(y,m-1,d+n);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const somaMes=(k,n)=>{const[y,m]=k.split('-').map(Number);const x=new Date(y,m-1+n,1);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')};
+function rotDia(d){if(!d)return'Escolher';const[y,m,dd]=d.split('-').map(Number),hj=hoje();const tag=d===hj?'Hoje':d===somaDias(hj,-1)?'Ontem':d===somaDias(hj,1)?'Amanhã':'';
+  return `${SEMN[new Date(y,m-1,dd).getDay()]} ${fmtD(d)}${tag?` <i>${tag}</i>`:''}`}
+function rotMes(k){if(!k)return'Escolher';const[y,m]=k.split('-').map(Number);return `${MESN[m-1]}/${y}`}
+function campoData(id,v){return `<div class="gNavData"><button type="button" class="gSeta" data-dn="-1" data-alvo="${id}" aria-label="Dia anterior">◀</button><label class="gDataBox"><span>${rotDia(v)}</span><input type="date" id="${id}" value="${v||''}"></label><button type="button" class="gSeta" data-dn="1" data-alvo="${id}" aria-label="Dia seguinte">▶</button></div><button type="button" class="gHoje" data-hoje="${id}" ${v===hoje()?'hidden':''}>Voltar para hoje</button>`}
+function campoMes(id,v){return `<div class="gNavData"><button type="button" class="gSeta" data-mn="-1" data-alvo="${id}" aria-label="Mês anterior">◀</button><label class="gDataBox"><span>${rotMes(v)}</span><input type="month" id="${id}" value="${v||''}"></label><button type="button" class="gSeta" data-mn="1" data-alvo="${id}" aria-label="Mês seguinte">▶</button></div>`}
+function syncData(i){const sp=i.closest('.gDataBox').querySelector('span');sp.innerHTML=i.type==='month'?rotMes(i.value):rotDia(i.value);
+  const h=document.querySelector(`[data-hoje="${i.id}"]`);if(h)h.hidden=i.value===hoje()}
+function mudaData(i,v){i.value=v;syncData(i);i.dispatchEvent(new Event('change',{bubbles:true}))}
+document.addEventListener('click',e=>{const t=e.target;
+  const inp=t.closest&&t.closest('.gDataBox input');if(inp&&inp.showPicker){try{inp.showPicker()}catch(_){}}
+  const b=t.closest&&t.closest('[data-dn],[data-mn],[data-hoje]');if(!b)return;
+  const i=document.getElementById(b.dataset.alvo||b.dataset.hoje);if(!i)return;
+  if(b.dataset.hoje)mudaData(i,hoje());else if(b.dataset.dn)mudaData(i,somaDias(i.value||hoje(),+b.dataset.dn));else mudaData(i,somaMes(i.value||hoje().slice(0,7),+b.dataset.mn));});
+document.addEventListener('change',e=>{const i=e.target;if(i.closest&&i.closest('.gDataBox')&&(i.type==='date'||i.type==='month'))syncData(i)},true);
 
 /* ===================== NAVEGAÇÃO ===================== */
 const TELAS={menu,estoque,entrada:()=>formMov('ENTRADA'),saida:()=>formMov('SAIDA'),morte:()=>formMov('MORTE'),transf:()=>formMov('TRANSF'),despesas,faturas,historico,gestao,arrend,lotes:telaLotes};
@@ -237,53 +265,71 @@ function estoque(){
 }
 
 /* ===================== ENTRADA / SAÍDA / MORTE / TRANSFERÊNCIA ===================== */
-let fotoTmp='';
-function formMov(tipo){
-  fotoTmp='';
+let fotoTmp='',EDIT=null;
+function formMov(tipo,ed){
+  fotoTmp='';EDIT=ed||null;
   const ehT=tipo==='TRANSF',ehM=tipo==='MORTE';
   $('#cx').innerHTML=`<div class="card">
-    <div class="row"><div><label>Data</label><input type="date" id="fData" value="${hoje()}"></div>
-    <div><label>Quantidade</label><input type="number" inputmode="numeric" id="fQtd" value="${ehM?1:''}" ${ehM?'readonly':''}></div></div>
+    ${EDIT?`<div class="hint" style="margin:0 0 6px">✏️ Editando lançamento de ${fmtD(EDIT.data)}</div>`:''}<label>Data</label>${campoData('fData',EDIT?EDIT.data:hoje())}
+    <label>Quantidade</label><input type="number" inputmode="numeric" id="fQtd" value="${ehM?1:''}" ${ehM?'readonly':''}>
     <label>${ehT?'Lote de origem':'Lote'}</label><select id="fLote">${optLotes()}</select>
     ${ehT?`<label>Lote de destino</label><select id="fDest">${optLotes()}</select>`:''}
     <label>Sexo</label><div class="seg" id="fSexo"><button data-s="M" class="on">Macho</button><button data-s="F">Fêmea</button></div>
     ${ehM?`<label>Brinco do animal</label><input id="fBrinco" placeholder="Ex.: 20345 (vazio = sem brinco)">
       <label>Foto</label><label class="filebtn" style="text-transform:none;letter-spacing:0;font-size:1rem;margin:0">📷 Tirar ou escolher foto<input type="file" accept="image/*" id="fFoto"></label><img id="fPrev" class="foto" style="display:none">
       <label>Causa / observação</label><input id="fObs" placeholder="Ex.: caiu na vala, onça...">`:`
-    <div class="row"><div><label>Peso total (kg) — opcional</label><input type="number" inputmode="decimal" id="fPeso"></div>
-    <div><label>Valor total (R$) — opcional</label><input type="number" inputmode="decimal" id="fValor"></div></div>
-    <div class="mut" id="fMedio"></div>
+    <label>Tipo de ${tipo==='ENTRADA'?'entrada':'saída'}</label><select id="fSub">${(tipo==='ENTRADA'?SUB_ENT:SUB_SAI).map(x=>`<option>${x}</option>`).join('')}</select>
+    <label>Peso total (kg) — opcional</label><input type="number" inputmode="decimal" id="fPeso">
+    <div class="row"><div><label>Valor por arroba (R$/@)</label><input type="number" inputmode="decimal" id="fArroba"></div>
+    <div><label>Valor total (R$)</label><input type="number" inputmode="decimal" id="fValor"></div></div>
+    <label>Arroba</label><div class="seg" id="fDiv"><button data-d="30" class="on">@ = 30 kg vivo</button><button data-d="15">@ = 15 kg</button></div>
+    <div class="mut" id="fMedio" style="margin-top:8px"></div>
     <label>Observação</label><input id="fObs" placeholder="${tipo==='ENTRADA'?'Ex.: desmama Centrão, compra fulano':'Ex.: venda JBS, foi para o Sítio'}">`}
-    <button class="bt" onclick="salvarMov('${tipo}')">Registrar ${({ENTRADA:'entrada',SAIDA:'saída',MORTE:'morte',TRANSF:'transferência'})[tipo]}</button>
+    <button class="bt" onclick="salvarMov('${tipo}')">${EDIT?'Salvar alteração':'Registrar '+({ENTRADA:'entrada',SAIDA:'saída',MORTE:'morte',TRANSF:'transferência'})[tipo]}</button>${EDIT?`<button class="bt sec" onclick="formMov('${tipo}')">Cancelar edição</button>`:''}
   </div>
   ${ehT?'<div class="hint">A transferência baixa do lote de origem e soma no destino na mesma data. Nas faturas, cada arrendamento cobra só os dias em que o animal esteve lá.</div>':''}
-  ${tipo==='SAIDA'?'<div class="hint">Saída para venda, para fazenda própria etc. Morte tem botão próprio (pede brinco e foto).</div>':''}
+  ${tipo==='SAIDA'?'<div class="hint">Transferência entre arrendamentos tem botão próprio, e morte também (pede brinco e foto).</div>':''}
   <div class="card"><h3>Últimos lançamentos</h3><div id="ult"></div></div>`;
   $('#fSexo').onclick=e=>{if(!e.target.dataset.s)return;[...$('#fSexo').children].forEach(b=>b.classList.toggle('on',b===e.target))};
-  const calc=()=>{const q=+$('#fQtd').value,p=+$('#fPeso').value,v=+$('#fValor').value;
-    $('#fMedio').textContent=(q&&p?'Peso médio: '+N(p/q)+' kg':'')+(q&&v?'   ·   Valor por cabeça: '+R$(v/q):'')+(p&&v?'   ·   R$/kg: '+N(v/p):'')};
-  if(!ehM){['fQtd','fPeso','fValor'].forEach(i=>$('#'+i).oninput=calc)}
+  const div=()=>+($('#fDiv .on')||{dataset:{d:30}}).dataset.d;
+  const calc=(quem)=>{const q=+$('#fQtd').value,p=+$('#fPeso').value,arr=p?p/div():0;
+    if(arr&&quem==='arroba'){const a=+$('#fArroba').value;$('#fValor').value=a?Math.round(a*arr*100)/100:''}
+    else if(arr&&quem==='valor'){const v=+$('#fValor').value;$('#fArroba').value=v?Math.round(v/arr*100)/100:''}
+    else if(arr&&+$('#fArroba').value){$('#fValor').value=Math.round(+$('#fArroba').value*arr*100)/100}
+    const v=+$('#fValor').value;
+    $('#fMedio').innerHTML=[q&&p?'Peso médio: <b>'+N(p/q)+' kg</b>':'',arr?'Arrobas: <b>'+N(arr)+' @</b>'+(q?' ('+N(arr/q)+' @/cab)':''):'',q&&v?'Valor por cabeça: <b>'+R$(v/q)+'</b>':'',p&&v?'R$/kg: <b>'+N(v/p)+'</b>':''].filter(Boolean).join(' · ')};
+  if(!ehM){$('#fQtd').oninput=()=>calc();$('#fPeso').oninput=()=>calc();$('#fArroba').oninput=()=>calc('arroba');$('#fValor').oninput=()=>calc('valor');
+    $('#fDiv').onclick=e=>{if(!e.target.dataset.d)return;[...$('#fDiv').children].forEach(b=>b.classList.toggle('on',b===e.target));calc()}}
   else $('#fFoto').onchange=e=>reduzFoto(e.target.files[0]);
+  if(EDIT){const e=EDIT,sv=(id,v)=>{const x=$('#'+id);if(x&&v!==undefined&&v!==null)x.value=v};
+    sv('fQtd',e.qtd);sv('fLote',e.loteId);sv('fDest',e.loteDest);sv('fPeso',e.peso);sv('fArroba',e.precoArroba);sv('fValor',e.valor);sv('fBrinco',e.brinco);sv('fObs',e.obs);if(e.subtipo)sv('fSub',e.subtipo);else if($('#fSub')){$('#fSub').insertAdjacentHTML('afterbegin','<option value="">—</option>');$('#fSub').value=''}
+    [...$('#fSexo').children].forEach(b=>b.classList.toggle('on',b.dataset.s===(e.sexo||'M')));
+    if($('#fDiv')&&e.divArroba)[...$('#fDiv').children].forEach(b=>b.classList.toggle('on',+b.dataset.d===+e.divArroba));
+    if(e.foto){fotoTmp=e.foto;$('#fPrev').src=e.foto;$('#fPrev').style.display=''}
+    if(!ehM)calc();scrollTo(0,0)}
   listaMov($('#ult'),DB.movs.filter(m=>m.tipo===tipo).slice(-5).reverse());
 }
 function reduzFoto(f){if(!f)return;const r=new FileReader();r.onload=ev=>{const im=new Image();im.onload=()=>{const k=Math.min(1,800/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);fotoTmp=c.toDataURL('image/jpeg',.7);$('#fPrev').src=fotoTmp;$('#fPrev').style.display=''};im.src=ev.target.result};r.readAsDataURL(f)}
 function salvarMov(tipo){
-  const m={id:nid('M'),tipo,data:$('#fData').value,loteId:$('#fLote').value,qtd:+$('#fQtd').value,sexo:$('#fSexo .on').dataset.s,
-    peso:$('#fPeso')?+$('#fPeso').value||'':'',valor:$('#fValor')?+$('#fValor').value||'':'',brinco:$('#fBrinco')?$('#fBrinco').value.trim():'',foto:fotoTmp,obs:$('#fObs').value.trim()};
+  const m={id:EDIT?EDIT.id:nid('M'),criadoEm:EDIT?EDIT.criadoEm:undefined,tipo,data:$('#fData').value,loteId:$('#fLote').value,qtd:+$('#fQtd').value,sexo:$('#fSexo .on').dataset.s,
+    peso:$('#fPeso')?+$('#fPeso').value||'':'',valor:$('#fValor')?+$('#fValor').value||'':'',subtipo:$('#fSub')?$('#fSub').value:'',precoArroba:$('#fArroba')?+$('#fArroba').value||'':'',divArroba:$('#fDiv')?+$('#fDiv .on').dataset.d:'',brinco:$('#fBrinco')?$('#fBrinco').value.trim():'',foto:fotoTmp,obs:$('#fObs').value.trim()};
   if(tipo==='TRANSF')m.loteDest=$('#fDest').value;
   if(!m.data||!m.qtd||m.qtd<1)return toast('Informe data e quantidade');
   if(tipo==='TRANSF'&&m.loteDest===m.loteId)return toast('Origem e destino iguais');
-  if(tipo!=='ENTRADA'&&m.qtd>saldo(m.loteId))return toast('Quantidade maior que o saldo do lote ('+saldo(m.loteId)+')');
-  put('movs',m);toast('Registrado ✓');formMov(tipo);
+  const disp=saldo(m.loteId)+(EDIT&&EDIT.loteId===m.loteId&&EDIT.tipo!=='ENTRADA'?+EDIT.qtd:0);
+  if(tipo!=='ENTRADA'&&m.qtd>disp)return toast('Quantidade maior que o saldo do lote ('+disp+')');
+  put('movs',m);toast(EDIT?'Alterado ✓':'Registrado ✓');formMov(tipo);
 }
 function listaMov(el,ms){
   if(!ms.length){el.innerHTML='<p class="mut">Nenhum lançamento.</p>';return}
   const T={ENTRADA:['E','Entrada'],SAIDA:['S','Saída'],MORTE:['M','Morte'],TRANSF:['T','Transf.']};
   el.innerHTML=ms.map(m=>`<div class="list-it"><div><span class="tag ${T[m.tipo][0]}">${T[m.tipo][1]}</span> <b>${m.qtd} cab</b> · ${fmtD(m.data)}<br>
-   <span class="mut">${nomeLote(m.loteId)}${m.tipo==='TRANSF'?' → '+nomeLote(m.loteDest):''}${m.peso?' · '+N(m.peso)+' kg ('+N(m.peso/m.qtd)+' méd)':''}${m.valor?' · '+R$(m.valor):''}${m.brinco?' · brinco '+m.brinco:''}${m.obs?' · '+m.obs:''}</span>
+   <span class="mut">${nomeLote(m.loteId)}${m.tipo==='TRANSF'?' → '+nomeLote(m.loteDest):''}${m.peso?' · '+N(m.peso)+' kg ('+N(m.peso/m.qtd)+' méd)':''}${m.subtipo?' · '+m.subtipo:''}${m.precoArroba?' · '+R$(m.precoArroba)+'/@':''}${m.valor?' · '+R$(m.valor):''}${m.brinco?' · brinco '+m.brinco:''}${m.obs?' · '+m.obs:''}</span>
    ${m.foto?`<img src="${m.foto}" class="foto">`:''}</div>
-   <button class="bt sm sec" onclick="excluirMov('${m.id}')">✕</button></div>`).join('');
+   <div style="display:flex;flex-direction:column;gap:4px"><button class="bt sm" onclick="editarMov('${m.id}')">✏️ Editar</button><button class="bt sm sec" onclick="excluirMov('${m.id}')">🗑 Excluir</button></div></div>`).join('');
 }
+const TELA_TIPO={ENTRADA:'entrada',SAIDA:'saida',MORTE:'morte',TRANSF:'transf'};
+function editarMov(id){const m=DB.movs.find(x=>x.id===id);if(!m)return;go(TELA_TIPO[m.tipo]);formMov(m.tipo,JSON.parse(JSON.stringify(m)))}
 function excluirMov(id){if(!confirmar('Excluir este lançamento?',()=>{del('movs',id);toast('Excluído');go(TELA)}))return}
 
 /* ===================== MOVIMENTAÇÕES (histórico) ===================== */
@@ -316,7 +362,7 @@ function calcFatura(ym){
 }
 function faturas(){
   const d=new Date();const ym0=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  $('#cx').innerHTML=`<div class="card"><label>Mês de referência</label><input type="month" id="fM" value="${ym0}"></div><div id="fR"></div>
+  $('#cx').innerHTML=`<div class="card"><label>Mês de referência</label>${campoMes('fM',ym0)}</div><div id="fR"></div>
   <div class="hint"><b>Como calcula:</b> valor por cabeça ÷ 30 × dias. Mês fechado = 30 dias. Entrou dia 10 → 20 dias (mês de 30) ou 21 (mês de 31). Saída, morte e transferência cobram até o dia em que saiu.</div>`;
   const r=()=>{const ym=$('#fM').value;if(!ym)return;const F=calcFatura(ym);let html='',tg=0,ts=0;
     DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length)return;let ta=0,sa=0;
@@ -342,22 +388,26 @@ function gerarDespesas(ym){
 /* ===================== DESPESAS ===================== */
 function despesas(){
   $('#cx').innerHTML=`<div class="card"><h3>Nova despesa</h3>
-  <div class="row"><div><label>Data</label><input type="date" id="dD" value="${hoje()}"></div><div><label>Tipo</label><select id="dT"><option>ARRENDAMENTO</option><option>SALÁRIO</option><option>SAL MINERAL</option><option>VACINA/REMÉDIO</option><option>FRETE</option><option>OUTROS</option></select></div></div>
+  <label>Data</label>${campoData('dD',hoje())}
+  <label>Tipo</label><select id="dT"><option>ARRENDAMENTO</option><option>SALÁRIO</option><option>SAL MINERAL</option><option>VACINA/REMÉDIO</option><option>FRETE</option><option>OUTROS</option></select>
   <label>Arrendamento</label><select id="dA">${DB.arr.map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
   <label>Lote (opcional)</label><select id="dL"></select>
   <label>Descrição</label><input id="dDs" placeholder="Ex.: aluguel do mês de novembro">
   <div class="row"><div><label>Valor (R$)</label><input type="number" inputmode="decimal" id="dV"></div><div><label>Situação</label><select id="dS"><option>PAGO</option><option>A PAGAR</option></select></div></div>
-  <button class="bt" onclick="salvarDesp()">Registrar despesa</button></div>
-  <div class="card"><div class="row"><div><label>Filtrar mês</label><input type="month" id="dfM" value="${hoje().slice(0,7)}"></div><div><label>Situação</label><select id="dfS"><option value="">Todas</option><option>A PAGAR</option><option>PAGO</option></select></div></div><div id="dLst" style="margin-top:8px"></div></div>`;
+  <input type="hidden" id="dId"><button class="bt" id="dBt" onclick="salvarDesp()">Registrar despesa</button><button class="bt sec" id="dCanc" hidden onclick="despesas()">Cancelar edição</button></div>
+  <div class="card"><label>Mês</label>${campoMes('dfM',hoje().slice(0,7))}
+  <label>Situação</label><select id="dfS"><option value="">Todas</option><option>A PAGAR</option><option>PAGO</option></select><div id="dLst" style="margin-top:8px"></div></div>`;
   const lotes=()=>{$('#dL').innerHTML='<option value="">— Arrendamento todo —</option>'+DB.lotes.filter(l=>l.arrId===$('#dA').value).map(l=>`<option value="${l.id}">${l.nome} (${l.prop})</option>`).join('')};
   $('#dA').onchange=lotes;lotes();$('#dfM').onchange=listaDesp;$('#dfS').onchange=listaDesp;listaDesp();
 }
 function salvarDesp(){const v=+$('#dV').value;if(!v)return toast('Informe o valor');
-  put('desp',{id:nid('D'),data:$('#dD').value,tipo:$('#dT').value,arrId:$('#dA').value,loteId:$('#dL').value,desc:$('#dDs').value.trim(),valor:v,status:$('#dS').value});toast('Despesa registrada ✓');despesas()}
+  const old=$('#dId').value&&DB.desp.find(x=>x.id===$('#dId').value)||{};
+  put('desp',{...old,id:old.id||nid('D'),data:$('#dD').value,tipo:$('#dT').value,arrId:$('#dA').value,loteId:$('#dL').value,desc:$('#dDs').value.trim(),valor:v,status:$('#dS').value});toast(old.id?'Despesa alterada ✓':'Despesa registrada ✓');despesas()}
+function editarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;const i=$('#dD');i.value=d.data;syncData(i);$('#dT').value=d.tipo;$('#dA').value=d.arrId;$('#dA').onchange();$('#dL').value=d.loteId||'';$('#dDs').value=d.desc||'';$('#dV').value=d.valor;$('#dS').value=d.status;$('#dId').value=d.id;$('#dBt').textContent='Salvar alteração';$('#dCanc').hidden=false;scrollTo(0,0)}
 function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value;const ds=DB.desp.filter(d=>(!ym||d.data.startsWith(ym))&&(!s||d.status===s)).sort((a,b)=>b.data.localeCompare(a.data));
   const tot=ds.reduce((a,d)=>a+d.valor,0),ap=ds.filter(d=>d.status==='A PAGAR').reduce((a,d)=>a+d.valor,0);
   $('#dLst').innerHTML=(ds.map(d=>`<div class="list-it"><div><b>${R$(d.valor)}</b> · ${fmtD(d.data)} <span class="tag ${d.status==='PAGO'?'E':'M'}">${d.status}</span><br><span class="mut">${d.tipo} · ${arrDe(d.arrId).nome||''}${d.loteId?' · '+loteDe(d.loteId).nome:''}${d.desc?' · '+d.desc:''}</span></div>
-  <div style="display:flex;flex-direction:column;gap:4px">${d.status==='A PAGAR'?`<button class="bt sm" onclick="pagarDesp('${d.id}')">Pagar</button>`:''}<button class="bt sm sec" onclick="confirmar('Excluir esta despesa?',()=>{del('desp','${d.id}');listaDesp()})">✕</button></div></div>`).join('')||'<p class="mut">Nenhuma despesa no filtro.</p>')
+  <div style="display:flex;flex-direction:column;gap:4px">${d.status==='A PAGAR'?`<button class="bt sm" onclick="pagarDesp('${d.id}')">Pagar</button>`:''}<button class="bt sm sec" onclick="editarDesp('${d.id}')">✏️ Editar</button><button class="bt sm sec" onclick="confirmar('Excluir esta despesa?',()=>{del('desp','${d.id}');listaDesp()})">🗑 Excluir</button></div></div>`).join('')||'<p class="mut">Nenhuma despesa no filtro.</p>')
   +`<table style="margin-top:8px"><tr class="tot"><td>Total</td><td class="n">${R$(tot)}</td></tr><tr><td>A pagar</td><td class="n" style="color:var(--err)">${R$(ap)}</td></tr></table>`}
 function pagarDesp(id){const d=DB.desp.find(x=>x.id===id);d.status='PAGO';d.pagoEm=hoje();put('desp',d);listaDesp();toast('Marcado como pago')}
 

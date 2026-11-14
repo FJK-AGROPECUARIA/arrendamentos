@@ -9,7 +9,7 @@
 const TABELAS = {
   arr:   { aba: 'Arrendamentos', cols: ['id', 'nome', 'cidade', 'ativo'] },
   lotes: { aba: 'Lotes',         cols: ['id', 'arrId', 'nome', 'prop', 'valorCab', 'salario', 'ativo'] },
-  movs:  { aba: 'Movimentos',    cols: ['id', 'data', 'tipo', 'loteId', 'loteDest', 'qtd', 'sexo', 'peso', 'valor', 'brinco', 'foto', 'obs', 'criadoEm'] },
+  movs:  { aba: 'Movimentos',    cols: ['id', 'data', 'tipo', 'loteId', 'loteDest', 'qtd', 'sexo', 'peso', 'valor', 'brinco', 'foto', 'obs', 'criadoEm', 'subtipo', 'precoArroba', 'divArroba'] },
   desp:  { aba: 'Despesas',      cols: ['id', 'data', 'tipo', 'arrId', 'loteId', 'desc', 'valor', 'status', 'ref', 'pagoEm', 'criadoEm'] },
   props: { aba: 'Proprietarios', cols: ['id', 'nome'] }
 };
@@ -34,6 +34,8 @@ function aba_(t) {
     sh.setFrozenRows(1);
     ['Sheet1', 'Página1', 'Planilha1'].forEach(n => { const s = ss.getSheetByName(n); if (s && s.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(s); });
   }
+  const n = def.cols.length, cab = sh.getRange(1, 1, 1, n).getValues()[0];
+  if (cab.join('|') !== def.cols.join('|')) sh.getRange(1, 1, 1, n).setValues([def.cols]).setFontWeight('bold').setBackground('#6d4321').setFontColor('#ffffff');
   return sh;
 }
 
@@ -42,7 +44,7 @@ function ler_(t) {
   if (n < 1) return [];
   return sh.getRange(2, 1, n, cols.length).getValues()
     .filter(r => r[0] !== '')
-    .map(r => { const o = {}; cols.forEach((c, i) => o[c] = r[i] === null ? '' : String(r[i])); return o; });
+    .map(r => { const o = {}; cols.forEach((c, i) => { const v = r[i]; o[c] = v === null ? '' : (v instanceof Date ? Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(v)); }); return o; });
 }
 
 function linhaDoId_(sh, id) {
@@ -77,8 +79,8 @@ function salvar_(t, reg) {
   const sh = aba_(t), cols = TABELAS[t].cols;
   const linha = cols.map(c => reg[c] === undefined || reg[c] === null ? '' : String(reg[c]));
   const r = linhaDoId_(sh, reg.id);
-  if (r > 0) sh.getRange(r, 1, 1, cols.length).setValues([linha]);
-  else sh.appendRow(linha);
+  const lin = r > 0 ? r : sh.getLastRow() + 1;
+  sh.getRange(lin, 1, 1, cols.length).setNumberFormat('@').setValues([linha]);
   return reg;
 }
 

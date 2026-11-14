@@ -93,6 +93,7 @@ tr.tot td{font-weight:800;background:var(--chip);border-bottom:0}
 #toast.on{opacity:1}
 .pk{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:flex-end}
 .pk .pkBox{background:#fff;width:100%;max-height:80vh;overflow:auto;border-radius:18px 18px 0 0;padding:8px 14px 24px}
+.pk .pkT{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 4px 2px}
 .pk .pkG{font-weight:800;color:var(--fg);font-size:1.05rem;padding:14px 4px 4px;border-top:1px solid #eee}.pk .pkG:first-child{border-top:0}
 .pk .pkI{padding:10px 12px;margin:4px 0;border-radius:10px;background:#f5f2ee;cursor:pointer}.pk .pkI.on{background:var(--accent);color:#fff}.pk .pkI.on .mut{color:#f3e6d8}
 .pk .pkI b{display:block}.pk .pkI .mut{font-size:.95rem}
@@ -157,7 +158,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='16';
+const APP_VERSAO='17';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -262,22 +263,23 @@ document.addEventListener('change',e=>{const i=e.target;if(i.tagName==='SELECT'&
 
 /* ===================== NAVEGAÇÃO ===================== */
 const TELAS={menu,estoque,entrada:()=>formMov('ENTRADA'),saida:()=>formMov('SAIDA'),morte:()=>formMov('MORTE'),transf:()=>formMov('TRANSF'),despesas,faturas,historico,gestao,arrend:telaLocais,lotes:telaLocais};
-const TITULOS={menu:'Parcerias',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',arrend:'Locais e Lotes',lotes:'Locais e Lotes'};
-let TELA='menu';
+const TITULOS={menu:'Parcerias',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',arrend:'Parceiros e Lotes',lotes:'Parceiros e Lotes'};
+let TELA='menu',VOLTA=null;
+function voltar(){const md=document.querySelector('.modal,.pk');if(md){md.remove();return}if(VOLTA){const f=VOLTA;VOLTA=null;f();scrollTo(0,0);return}go('menu')}
 const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'💲',faturas:'🧾',historico:'📋',gestao:'⚙️',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
 const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#ae8a63',lotes:'#b0782a',gestao:'#11253d'};
-function go(t){TELA=t;document.body.classList.toggle('naInicio',t==='menu');
+function go(t){TELA=t;VOLTA=null;document.body.classList.toggle('naInicio',t==='menu');
   if(t==='menu'){menu()}else{
-    $('#app').innerHTML=`<div class="tela"><button class="barra" onclick="go('menu')"><span>☰ ${ICONES[t]} ${TITULOS[t]}</span><span>◀ voltar</span></button><div id="cx"></div></div>`;
-    TELAS[t]();['#fLote','#fDest','#fTrLote','#dL'].forEach(q=>{const x=$(q);if(x)selPicker(x)})}
+    $('#app').innerHTML=`<div class="tela"><button class="barra" onclick="voltar()"><span>☰ ${ICONES[t]} ${TITULOS[t]}</span><span>◀ voltar</span></button><div id="cx"></div></div>`;
+    TELAS[t]()}
   syncSels();status();scrollTo(0,0)}
 function tile(t,txt,full){return `<button class="${full?'full':''}" style="--c:${CORES[t]}" onclick="${t==='gestao'?'pedirSenha()':`go('${t}')`}"><span class="gIc">${ICONES[t]}</span><span>${txt||TITULOS[t]}</span></button>`}
 function menu(){
   const lotes=DB.lotes.filter(l=>l.ativo);const tot=lotes.reduce((s,l)=>s+saldo(l.id),0);
   $('#app').innerHTML=`
-  <div class="kpis"><div class="kpi"><b>${DB.arr.filter(a=>a.ativo).length}</b><span>locais</span></div><div class="kpi"><b>${lotes.length}</b><span>lotes</span></div><div class="kpi"><b>${N(tot)}</b><span>cabeças</span></div></div>
+  <div class="kpis"><div class="kpi"><b>${DB.arr.filter(a=>a.ativo).length}</b><span>parceiros</span></div><div class="kpi"><b>${lotes.length}</b><span>lotes</span></div><div class="kpi"><b>${N(tot)}</b><span>cabeças</span></div></div>
   <div class="tiles">
-    ${tile('arrend','Locais e Lotes',1)}
+    ${tile('arrend','Parceiros e Lotes',1)}
     ${tile('entrada','Entrada')}${tile('saida','Saídas/Transf')}
     ${tile('morte','Morte')}${tile('historico','Movimentações')}
     ${tile('despesas')}${tile('faturas')}
@@ -318,7 +320,7 @@ function formMov(tipo,ed){
     ${tipo==='ENTRADA'||tipo==='SAIDA'?`<label>Tipo de ${tipo==='ENTRADA'?'entrada':'saída'}</label><select id="fSub">${(tipo==='ENTRADA'?SUB_ENT:SUB_SAI).map(x=>`<option>${x}</option>`).join('')}</select>`:''}
     ${tipo==='ENTRADA'?`<div id="fOrBox" hidden><label>Fazenda de origem</label><select id="fOrig"><option value="">SELECIONE</option>${FAZ_PROPRIAS.map(f=>`<option>${f}</option>`).join('')}</select></div>`:''}
     <label>${ehT||tipo==='SAIDA'?'<span id="fLoteLbl">'+(ehT?'Lote de origem':'Lote')+'</span>':(tipo==='ENTRADA'?'Lote destino':'Lote')}</label><select id="fLote">${optLotes()}</select>
-    ${tipo==='SAIDA'?`<div id="fTrBox" hidden><label>Destino</label><select id="fTrDest"><option value="">SELECIONE</option><optgroup label="Fazendas próprias">${FAZ_PROPRIAS.map(f=>`<option value="FAZ:${f}">${f}</option>`).join('')}</optgroup><optgroup label="Locais de parceria">${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</optgroup></select>
+    ${tipo==='SAIDA'?`<div id="fTrBox" hidden><label>Destino</label><select id="fTrDest"><option value="">SELECIONE</option><optgroup label="Fazendas próprias">${FAZ_PROPRIAS.map(f=>`<option value="FAZ:${f}">${f}</option>`).join('')}</optgroup><optgroup label="Parceiros">${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</optgroup></select>
       <div id="fTrLoteBox" hidden><label>Lote de destino</label><select id="fTrLote"></select>
         <div id="fTrNovo" hidden>
         <div class="row"><div><label>Proprietário</label><select id="fTrNP">${DB.props.map(p=>`<option>${p}</option>`).join('')}</select></div><div><label>Valor (cab/mês)</label><input id="fTrNV" type="number" inputmode="decimal"></div></div></div></div></div>`:''}
@@ -337,7 +339,7 @@ function formMov(tipo,ed){
     <button class="bt" onclick="salvarMov('${tipo}')">${EDIT?'Salvar alteração':'Registrar '+({ENTRADA:'entrada',SAIDA:'saída',MORTE:'morte',TRANSF:'transferência'})[tipo]}</button>${EDIT?`<button class="bt sec" onclick="formMov('${tipo}')">Cancelar edição</button>`:''}
   </div>
   ${ehT?'<div class="hint">A transferência baixa do lote de origem e soma no destino na mesma data. Nas faturas, cada parceria cobra só os dias em que o animal esteve lá.</div>':''}
-  ${tipo==='SAIDA'?'<div class="hint">Na transferência, para fazenda própria (Paraíso, JK, Jurema) o gado só sai deste sistema. Para outro local de parceria, ele entra no lote de destino. Morte tem botão próprio (pede brinco e foto).</div>':''}
+  ${tipo==='SAIDA'?'<div class="hint">Na transferência, para fazenda própria (Paraíso, JK, Jurema) o gado só sai deste sistema. Para outro parceiro, ele entra no lote de destino. Morte tem botão próprio (pede brinco e foto).</div>':''}
   <div class="card"><h3>Últimos lançamentos</h3><div id="ult"></div></div>`;
   if(tipo==='ENTRADA'){const orUpd=()=>{$('#fOrBox').hidden=$('#fSub').value!=='TRANSFERÊNCIA DE FAZENDA PRÓPRIA'};$('#fSub').onchange=orUpd;orUpd()}
   if(tipo==='SAIDA'){
@@ -399,12 +401,12 @@ function listaMov(el,ms){
    <div class="acoes"><button class="icb" title="Editar" onclick="editarMov('${m.id}')">✏️</button><button class="icb del" title="Excluir" onclick="excluirMov('${m.id}')">✕</button></div></div>`).join('');
 }
 const TELA_TIPO={ENTRADA:'entrada',SAIDA:'saida',MORTE:'morte',TRANSF:'transf'};
-function editarMov(id){const m=DB.movs.find(x=>x.id===id);if(!m)return;go(TELA_TIPO[m.tipo]);formMov(m.tipo,JSON.parse(JSON.stringify(m)))}
+function editarMov(id){const m=DB.movs.find(x=>x.id===id);if(!m)return;const de=TELA;go(TELA_TIPO[m.tipo]);VOLTA=()=>go(de);formMov(m.tipo,JSON.parse(JSON.stringify(m)))}
 function excluirMov(id){if(!confirmar('Excluir este lançamento?',()=>{del('movs',id);toast('Excluído');go(TELA)}))return}
 
 /* ===================== MOVIMENTAÇÕES (histórico) ===================== */
 function historico(){
-  $('#cx').innerHTML=`<div class="card fBox">${filtroSel('hA','Local',[['','Todos'],...DB.arr.map(a=>[a.id,a.nome])],'')}
+  $('#cx').innerHTML=`<div class="card fBox">${filtroSel('hA','Parceiro',[['','Todos'],...DB.arr.map(a=>[a.id,a.nome])],'')}
   ${filtroSel('hT','Tipo',[['','Todos'],['ENTRADA','Entradas'],['SAIDA','Saídas'],['MORTE','Mortes'],['TRANSF','Transferências']],'')}</div>
   <div class="card" id="hL"></div>`;
   const r=()=>{const a=$('#hA').value,t=$('#hT').value;
@@ -482,7 +484,7 @@ function despesas(){
   $('#cx').innerHTML=`<div class="card"><h3>Nova despesa</h3>
   <label>Data</label>${campoData('dD',hoje())}
   <label>Tipo</label><select id="dT"><option value="ARRENDAMENTO">PARCERIA</option><option>SALÁRIO</option><option>SAL MINERAL</option><option>VACINA/REMÉDIO</option><option>FRETE</option><option>OUTROS</option></select>
-  <label>Local</label><select id="dA">${DB.arr.map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
+  <label>Parceiro</label><select id="dA">${DB.arr.map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
   <label>Lote (opcional)</label><select id="dL"></select>
   <label>Descrição</label><input id="dDs">
   <div class="row"><div><label>Valor (R$)</label><input type="number" inputmode="decimal" id="dV"></div><div><label>Situação</label><select id="dS"><option>PAGO</option><option>A PAGAR</option></select></div></div>
@@ -495,7 +497,7 @@ function despesas(){
 function salvarDesp(){const v=+$('#dV').value;if(!v)return toast('Informe o valor');
   const old=$('#dId').value&&DB.desp.find(x=>x.id===$('#dId').value)||{};
   put('desp',{...old,id:old.id||nid('D'),data:$('#dD').value,tipo:$('#dT').value,arrId:$('#dA').value,loteId:$('#dL').value,desc:$('#dDs').value.trim(),valor:v,status:$('#dS').value});toast(old.id?'Despesa alterada ✓':'Despesa registrada ✓');despesas()}
-function editarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;const i=$('#dD');i.value=d.data;syncData(i);$('#dT').value=d.tipo;$('#dA').value=d.arrId;$('#dA').onchange();$('#dL').value=d.loteId||'';$('#dDs').value=d.desc||'';$('#dV').value=d.valor;$('#dS').value=d.status;$('#dId').value=d.id;$('#dBt').textContent='Salvar alteração';$('#dCanc').hidden=false;scrollTo(0,0)}
+function editarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;VOLTA=()=>go('despesas');const i=$('#dD');i.value=d.data;syncData(i);$('#dT').value=d.tipo;$('#dA').value=d.arrId;$('#dA').onchange();$('#dL').value=d.loteId||'';$('#dDs').value=d.desc||'';$('#dV').value=d.valor;$('#dS').value=d.status;$('#dId').value=d.id;$('#dBt').textContent='Salvar alteração';$('#dCanc').hidden=false;scrollTo(0,0)}
 function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value;const ds=DB.desp.filter(d=>(!ym||d.data.startsWith(ym))&&(!s||d.status===s)).sort((a,b)=>b.data.localeCompare(a.data));
   const tot=ds.reduce((a,d)=>a+d.valor,0),ap=ds.filter(d=>d.status==='A PAGAR').reduce((a,d)=>a+d.valor,0);
   $('#dLst').innerHTML=(ds.map(d=>`<div class="list-it"><div><b>${R$(d.valor)}</b> · ${fmtD(d.data)} <span class="tag ${d.status==='PAGO'?'E':'M'}">${d.status}</span><br><span class="mut">${d.tipo==='ARRENDAMENTO'?'PARCERIA':d.tipo} · ${arrDe(d.arrId).nome||''}${d.loteId?' · '+loteDe(d.loteId).nome:''}${d.desc?' · '+d.desc:''}</span></div>
@@ -504,11 +506,14 @@ function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value;const ds=DB.desp
 function pagarDesp(id){const d=DB.desp.find(x=>x.id===id);d.status='PAGO';d.pagoEm=hoje();put('desp',d);listaDesp();toast('Marcado como pago')}
 
 /* ===================== GESTÃO (senha 0000) ===================== */
+function aplicarPickers(){document.querySelectorAll('#app select').forEach(x=>{if(!x.closest('.fLin')&&!x.closest('.selW'))selPicker(x)})}
+new MutationObserver(aplicarPickers).observe(document.getElementById('app'),{childList:true,subtree:true});
 function selPicker(sel){if(sel.parentNode.classList.contains('selW'))return;const w=document.createElement('div');w.className='selW';sel.parentNode.insertBefore(w,sel);w.appendChild(sel);
   w.onclick=()=>{const m=document.createElement('div');m.className='pk';let h='';
     const it=o=>o.dataset.p?`<div class="pkI${o.value===sel.value?' on':''}" data-v="${esc(o.value)}"><b>${esc(o.dataset.p)}</b><span class="mut">${esc(o.dataset.c)}</span></div>`:`<div class="pkI${o.value===sel.value?' on':''}" data-v="${esc(o.value)}"><b>${esc(o.textContent)}</b></div>`;
     [...sel.children].forEach(c=>{if(c.tagName==='OPTGROUP'){h+=`<div class="pkG">${esc(c.label)}</div>`+[...c.children].map(it).join('')}else h+=it(c)});
-    m.innerHTML=`<div class="pkBox">${h||'<p class="mut">Nenhum lote.</p>'}</div>`;document.body.appendChild(m);
+    const lb=w.previousElementSibling&&w.previousElementSibling.tagName==='LABEL'?w.previousElementSibling.textContent:'';
+    m.innerHTML=`<div class="pkBox">${lb?`<div class="pkT">${esc(lb)}</div>`:''}${h||'<p class="mut">Nenhuma opção.</p>'}</div>`;document.body.appendChild(m);
     m.onclick=e=>{const i=e.target.closest('.pkI');if(i){sel.value=i.dataset.v;sel.dispatchEvent(new Event('change',{bubbles:true}))}if(i||e.target===m)m.remove()};
     const on=m.querySelector('.on');if(on)on.scrollIntoView({block:'center'})}}
 function confirmar(txt,fn){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><p><b>${txt}</b></p><div class="row"><button class="bt sec" id="cN">Cancelar</button><button class="bt" id="cS">Confirmar</button></div></div>`;document.body.appendChild(m);m.querySelector('#cN').onclick=()=>m.remove();m.querySelector('#cS').onclick=()=>{m.remove();fn()};return false}
@@ -520,16 +525,16 @@ function pedirSenha(){let p='';const m=document.createElement('div');m.className
     if(p.length===4){if(p==='0000'){m.remove();go('gestao')}else{p='';$('#pin').textContent='';toast('Senha incorreta')}}}}
 /* ===================== LOCAL / LOTES (arrendamentos e lotes juntos) ===================== */
 let FL={loc:'',prop:'',inat:false};
-function telaLocais(){setTimeout(syncSels);
-  $('#cx').innerHTML=`<div class="row" id="llBts" style="margin-top:12px"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirArr()">+ Local</button><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirLote()">+ Lote</button><button class="bt ${FL.inat?'':'sec'}" style="margin:0;padding:12px 4px" onclick="FL.inat=!FL.inat;telaLocais()">${FL.inat?'◀ Ativos':'Inativos'}</button></div>
-  ${FL.inat?'<div class="hint" style="margin-top:10px">Mostrando só os <b>inativos</b>. Toque num local ou lote para abrir e reativar.</div>':''}
-  <div class="card" id="aForm" hidden><h3 id="aTit">Novo local</h3><input type="hidden" id="aId">
-   <label>Local (parceiro)</label><input id="aN">
+function telaLocais(){setTimeout(syncSels);VOLTA=FL.inat?()=>{FL.inat=false;telaLocais()}:null;
+  $('#cx').innerHTML=`<div class="row" id="llBts" style="margin-top:12px"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirArr()">+ Parceiro</button><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirLote()">+ Lote</button><button class="bt ${FL.inat?'':'sec'}" style="margin:0;padding:12px 4px" onclick="FL.inat=!FL.inat;telaLocais()">${FL.inat?'◀ Ativos':'Inativos'}</button></div>
+  ${FL.inat?'<div class="hint" style="margin-top:10px">Mostrando só os <b>inativos</b>. Toque num parceiro ou lote para abrir e reativar.</div>':''}
+  <div class="card" id="aForm" hidden><h3 id="aTit">Novo parceiro</h3><input type="hidden" id="aId">
+   <label>Parceiro</label><input id="aN">
    <label>Cidade</label><input id="aC">
    <input type="hidden" id="aAt" value="1">
    <div class="btRow"><button class="bt amar" id="aInat" hidden onclick="inatArr()"></button><button class="bt verm" onclick="telaLocais()">Cancelar</button><button class="bt verde" onclick="salvarArr()">Salvar</button></div></div>
   <div class="card" id="lForm" hidden><h3 id="lTit">Novo lote</h3><input type="hidden" id="lId">
-   <label>Local</label><select id="lA"><option value="">SELECIONE</option>${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
+   <label>Parceiro</label><select id="lA"><option value="">SELECIONE</option>${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
    <label>Categoria</label><select id="lCat"><option value="">SELECIONE</option>${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
    <label>Proprietário</label><select id="lP"><option value="">SELECIONE</option>${DB.props.map(p=>`<option>${p}</option>`).join('')}</select>
    <div class="row"><div><label>Valor (cab/mês)</label><input id="lV" type="number" inputmode="decimal"></div>
@@ -537,7 +542,7 @@ function telaLocais(){setTimeout(syncSels);
    <label>Observação</label><textarea id="lObs" rows="2"></textarea>
    <input type="hidden" id="lAt" value="1">
    <div class="btRow"><button class="bt amar" id="lInat" hidden onclick="inatLote()"></button><button class="bt verm" onclick="telaLocais()">Cancelar</button><button class="bt verde" onclick="salvarLote()">Salvar</button></div></div>
-  <div class="card fBox" id="llFil" ${FL.inat?'hidden':''}>${filtroSel('flLoc','Local',[['','Todos'],...DB.arr.filter(a=>a.ativo).map(a=>[a.id,a.nome])],FL.loc)}
+  <div class="card fBox" id="llFil" ${FL.inat?'hidden':''}>${filtroSel('flLoc','Parceiro',[['','Todos'],...DB.arr.filter(a=>a.ativo).map(a=>[a.id,a.nome])],FL.loc)}
    ${filtroSel('flProp','Proprietário',[['','Todos'],...DB.props.map(p=>[p,p])],FL.prop)}
    <div id="llRes" class="mut" style="margin-top:10px;text-align:center"></div></div>
   <div id="llLst"></div>`;
@@ -550,23 +555,23 @@ function telaLocais(){setTimeout(syncSels);
     return `<div class="card">
     <div class="arr-h clic" onclick="editArr('${a.id}')"><div><h3 style="letter-spacing:.02em">${a.nome} - ${a.cidade} - <span style="text-transform:none">${cab} cab</span>${a.ativo?'':' · <span style="color:var(--err)">inativo</span>'}</h3></div><span class="seta">›</span></div>
     ${ls.map(l=>`<div class="list-it clic" onclick="editLote('${l.id}')"><div><b>${rotLote(l).split(' - ').slice(1,-1).join(' - ')}</b> <span class="tag">${l.prop}</span>${catLote(l)?'':' <span class="tag M">sem categoria</span>'}<br>
-    <span class="mut">${saldo(l.id)} cab · ${R$(l.valorCab)}/cab/mês${l.salario?' · salário '+R$(l.salario):''}${l.ativo?'':' · <b style="color:var(--err)">inativo</b>'}</span></div><span class="seta">›</span></div>`).join('')||'<p class="mut">Nenhum lote.</p>'}</div>`}).join('')||`<div class="card mut">${FL.inat?'Nenhum local ou lote inativo.':'Nenhum local.'}</div>`;
+    <span class="mut">${saldo(l.id)} cab · ${R$(l.valorCab)}/cab/mês${l.salario?' · salário '+R$(l.salario):''}${l.ativo?'':' · <b style="color:var(--err)">inativo</b>'}</span></div><span class="seta">›</span></div>`).join('')||'<p class="mut">Nenhum lote.</p>'}</div>`}).join('')||`<div class="card mut">${FL.inat?'Nenhum parceiro ou lote inativo.':'Nenhum parceiro.'}</div>`;
 }
 const arrend=telaLocais;
-function abrirArr(){$('#aForm').hidden=false;$('#lForm').hidden=true;$('#llBts').hidden=true;$('#aTit').textContent='Novo local';scrollTo(0,0)}
+function abrirArr(){VOLTA=()=>telaLocais();$('#aForm').hidden=false;$('#lForm').hidden=true;$('#llBts').hidden=true;$('#aTit').textContent='Novo parceiro';scrollTo(0,0)}
 function editArr(id){abrirArr();const a=arrDe(id);$('#aId').value=id;$('#aN').value=a.nome;$('#aC').value=a.cidade;$('#aAt').value=a.ativo?'1':'0';$('#aTit').textContent='Editar '+a.nome;const b=$('#aInat');b.hidden=false;b.textContent=a.ativo?'Inativar':'Reativar';scrollTo(0,0)}
 function inatArr(){const a=arrDe($('#aId').value);if(!a.id)return;
   if(a.ativo){const c=DB.lotes.filter(l=>l.arrId===a.id&&l.ativo).reduce((s,l)=>s+saldo(l.id),0);if(c>0)return toast(a.nome+' ainda tem '+c+' cab — transfira ou dê saída antes');
-    confirmar('Inativar o local '+a.nome+'? Os lotes dele também ficam inativos.',()=>{a.ativo=false;put('arr',a);DB.lotes.filter(l=>l.arrId===a.id&&l.ativo).forEach(l=>{l.ativo=false;put('lotes',l)});toast('Local inativado');telaLocais()})}
-  else{a.ativo=true;put('arr',a);DB.lotes.filter(l=>l.arrId===a.id&&!l.ativo).forEach(l=>{l.ativo=true;put('lotes',l)});toast('Local e lotes reativados');FL.inat=false;telaLocais()}}
+    confirmar('Inativar o parceiro '+a.nome+'? Os lotes dele também ficam inativos.',()=>{a.ativo=false;put('arr',a);DB.lotes.filter(l=>l.arrId===a.id&&l.ativo).forEach(l=>{l.ativo=false;put('lotes',l)});toast('Parceiro inativado');telaLocais()})}
+  else{a.ativo=true;put('arr',a);DB.lotes.filter(l=>l.arrId===a.id&&!l.ativo).forEach(l=>{l.ativo=true;put('lotes',l)});toast('Parceiro e lotes reativados');FL.inat=false;telaLocais()}}
 function salvarArr(){const n=$('#aN').value.trim().toUpperCase(),c=$('#aC').value.trim().toUpperCase(),id=$('#aId').value,at=$('#aAt').value==='1';
-  if(!n)return toast('Informe o local');
+  if(!n)return toast('Informe o parceiro');
   if(id){const a=arrDe(id);a.nome=n;a.cidade=c;a.ativo=at;put('arr',a)}else put('arr',{id:nid('A'),nome:n,cidade:c,ativo:at});
   toast('Salvo ✓');telaLocais()}
 
 const telaLotes=telaLocais;
 function segSel(b){[...b.parentNode.children].forEach(x=>x.classList.toggle('on',x===b))}
-function abrirLote(){$('#lForm').hidden=false;$('#aForm').hidden=true;$('#llBts').hidden=true;$('#lTit').textContent='Novo lote';scrollTo(0,0)}
+function abrirLote(){VOLTA=()=>telaLocais();$('#lForm').hidden=false;$('#aForm').hidden=true;$('#llBts').hidden=true;$('#lTit').textContent='Novo lote';scrollTo(0,0)}
 function editLote(id){abrirLote();const l=loteDe(id);$('#lId').value=id;
   if(![...$('#lA').options].some(o=>o.value===l.arrId))$('#lA').insertAdjacentHTML('beforeend',`<option value="${l.arrId}">${arrDe(l.arrId).nome}</option>`);
   $('#lA').value=l.arrId;$('#lObs').value=l.obs||'';$('#lP').value=l.prop;$('#lV').value=l.valorCab||'';$('#lS').value=l.salario||'';$('#lCat').value=catLote(l);$('#lAt').value=l.ativo?'1':'0';
@@ -575,7 +580,7 @@ function inatLote(){const l=loteDe($('#lId').value);if(!l.id)return;
   if(l.ativo){const c=saldo(l.id);if(c>0)return toast('Lote ainda tem '+c+' cab — transfira ou dê saída antes');confirmar('Inativar o lote '+rotLote(l)+'?',()=>{l.ativo=false;put('lotes',l);toast('Lote inativado');telaLocais()})}
   else{const a=arrDe(l.arrId);if(a.id&&!a.ativo){a.ativo=true;put('arr',a)}l.ativo=true;put('lotes',l);toast('Lote reativado');FL.inat=false;telaLocais()}}
 function salvarLote(){const id=$('#lId').value;
-  if(!$('#lA').value)return toast('Selecione o local');if(!$('#lCat').value)return toast('Selecione a categoria');if(!$('#lP').value)return toast('Selecione o proprietário');const n=(arrDe($('#lA').value).nome+' - '+$('#lCat').value).toUpperCase();
+  if(!$('#lA').value)return toast('Selecione o parceiro');if(!$('#lCat').value)return toast('Selecione a categoria');if(!$('#lP').value)return toast('Selecione o proprietário');const n=(arrDe($('#lA').value).nome+' - '+$('#lCat').value).toUpperCase();
   const d={arrId:$('#lA').value,nome:n,prop:$('#lP').value,valorCab:+$('#lV').value||0,salario:+$('#lS').value||0,categoria:$('#lCat').value,obs:$('#lObs').value.trim(),ativo:$('#lAt').value==='1'};
   if(id){if(!d.ativo&&saldo(id)>0)return toast('Lote ainda tem '+saldo(id)+' cab — transfira ou dê saída antes');put('lotes',Object.assign(loteDe(id),d))}
   else put('lotes',Object.assign({id:nid('L')},d));
@@ -589,7 +594,7 @@ function gestao(){
    <label>Link do Google Script (/exec)</label><input id="gU" value="${api()}" placeholder="https://script.google.com/macros/s/.../exec">
    <button class="bt sec" onclick="try{localStorage.setItem(LS+'_url',$('#gU').value.trim())}catch(e){};carregar();toast('Link salvo')">Salvar link e sincronizar</button>
    <p class="mut">Pendentes de envio: <b>${FILA.length}</b>${DB.planilha?` · <a href="${DB.planilha}" target="_blank">abrir planilha</a>`:''}</p>
-   ${api()&&DB.servidorVazio?'<div class="hint">A planilha está vazia. Envie os locais, lotes e saldos iniciais para ela:</div><button class="bt" onclick="enviarTudo();gestao()">Enviar dados iniciais para a planilha</button>':''}
+   ${api()&&DB.servidorVazio?'<div class="hint">A planilha está vazia. Envie os parceiros, lotes e saldos iniciais para ela:</div><button class="bt" onclick="enviarTudo();gestao()">Enviar dados iniciais para a planilha</button>':''}
    <button class="bt sec" onclick="carregar();toast('Sincronizando...')">Sincronizar agora</button></div>`;
   $('#gP').innerHTML=DB.props.map(p=>`<div class="list-it"><b>${p}</b><span class="mut">${DB.lotes.filter(l=>l.prop===p&&l.ativo).reduce((s,l)=>s+saldo(l.id),0)} cab</span></div>`).join('');
 }

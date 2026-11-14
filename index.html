@@ -160,7 +160,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='20';
+const APP_VERSAO='21';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -447,11 +447,10 @@ function faturas(){
       tg+=ta;ts+=sa;
       html+=`<div class="card"><div class="arr-h"><h3>${a.nome}</h3><span class="mut">${a.cidade}</span></div><div class="scroll"><table class="fat">
       <tr><th>Lote</th><th class="n">Início</th><th class="n">Mov.</th><th class="n">Cab.</th><th class="n">Valor</th></tr>${rows}
-      <tr class="tot"><td colspan="4">Parceria do mês</td><td class="n">${R$(ta)}</td></tr>
+      <tr class="tot"><td colspan="4">Valor do mês${(()=>{const pd=r2(r2(ta)-r2(pagosDe(a.id,ym).reduce((s,p)=>s+(+p.valor||0),0)));return pd>0.004?` <button class="bt verde" style="display:inline-block;width:auto;margin:0 0 0 8px;padding:5px 12px;font-size:.85rem" onclick="abrirPag('${a.id}','${ym}',${pd})">💵 Pagar</button>`:''})()}</td><td class="n">${R$(ta)}</td></tr>
 
       ${sa?`<tr><td colspan="4">Salário do mês <span class="mut">(despesa separada)</span></td><td class="n">${R$(sa)}</td></tr>`:''}</table></div>${pagBloco(a,ym,ta)}</div>`});
-    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Parcerias</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pg=r2(DB.pags.filter(p=>p.ref===ym).reduce((s,p)=>s+(+p.valor||0),0));return `<tr><td>Parcerias pagas</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Parcerias pendentes</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>`})()}</table>
-    <button class="bt" onclick="gerarDespesas('${ym}')">Lançar faturas em Despesas (a pagar)</button></div>`};
+    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Parcerias</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pg=r2(DB.pags.filter(p=>p.ref===ym).reduce((s,p)=>s+(+p.valor||0),0));return `<tr><td>Parcerias pagas</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Parcerias pendentes</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>`})()}</table></div>`};
   $('#fM').onchange=r;r();
 }
 const r2=v=>Math.round((+v||0)*100)/100;
@@ -459,8 +458,7 @@ const pagosDe=(arrId,ym)=>DB.pags.filter(p=>p.arrId===arrId&&p.ref===ym);
 function pagBloco(a,ym,ta){const ps=pagosDe(a.id,ym),pg=r2(ps.reduce((s,p)=>s+(+p.valor||0),0)),pend=r2(r2(ta)-pg);if(!(r2(ta)>0)&&!ps.length)return'';
   const lin=(t,v,c)=>`<div style="display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #eee"><span>${t}</span><b style="color:${c}">${v}</b></div>`;
   return `<div style="margin-top:6px">${pg?lin('Pago',R$(pg),'var(--ok)'):''}${lin(pend>0.004?'<b>Pendente</b>':'<b>Quitado</b>',R$(Math.max(pend,0)),pend>0.004?'var(--err)':'var(--ok)')}
-  ${ps.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #eee"><span class="mut" style="flex:1">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
-  ${pend>0.004?`<button class="bt verde" style="margin:10px 0 0;padding:10px" onclick="abrirPag('${a.id}','${ym}',${pend})">💵 Pagar</button>`:''}</div>`}
+  ${ps.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #eee"><span class="mut" style="flex:1">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}</div>`}
 function abrirPag(arrId,ym,pend){const a=arrDe(arrId);const contas=[...new Set(DB.pags.map(p=>p.conta).filter(Boolean))];
   const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">Pagar ${esc(a.nome)} · ${ym.slice(5)}/${ym.slice(0,4)}</h3>
   <p class="mut" style="margin:0 0 6px">Pendente: <b>${R$(pend)}</b></p>
@@ -472,9 +470,11 @@ function abrirPag(arrId,ym,pend){const a=arrDe(arrId);const contas=[...new Set(D
   document.body.appendChild(m);m.querySelector('#pgN').onclick=()=>m.remove();
   m.querySelector('#pgS').onclick=()=>{const v=r2(mv('pgV')),dt=$('#pgD').value;if(!dt)return toast('Informe a data');if(!(v>0))return toast('Informe o valor');
     if(v>pend+0.004)return toast('Valor maior que o pendente ('+R$(pend)+')');if(!$('#pgC').value.trim())return toast('Informe a conta de pagamento');
-    put('pags',{id:nid('P'),arrId,ref:ym,data:dt,valor:v,conta:$('#pgC').value.trim().toUpperCase(),obs:$('#pgO').value.trim(),criadoEm:new Date().toISOString()});
+    const pid=nid('P'),conta=$('#pgC').value.trim().toUpperCase(),ob=$('#pgO').value.trim(),rf=ym.slice(5)+'/'+ym.slice(0,4);
+    put('pags',{id:pid,arrId,ref:ym,data:dt,valor:v,conta,obs:ob,criadoEm:new Date().toISOString()});
+    put('desp',{id:'D'+pid,data:dt,tipo:'ARRENDAMENTO',arrId,loteId:'',desc:'Pagamento parceria '+rf+' · '+conta+(ob?' · '+ob:''),valor:v,status:'PAGO',ref:rf,pagoEm:dt});
     m.remove();toast(v<pend-0.004?'Pagamento parcial lançado':'Pago');go('faturas')}}
-function delPag(id){confirmar('Excluir este pagamento?',()=>{del('pags',id);go('faturas')})}
+function delPag(id){confirmar('Excluir este pagamento? A despesa lançada junto também será excluída.',()=>{del('pags',id);if(DB.desp.some(d=>d.id==='D'+id))del('desp','D'+id);go('faturas')})}
 function gerarDespesas(ym){
   const F=calcFatura(ym);const [Y,M]=ym.split('-');const ref=M+'/'+Y;let n=0;
   DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);fs.forEach(x=>{

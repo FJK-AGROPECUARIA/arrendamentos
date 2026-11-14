@@ -87,6 +87,8 @@ tr.tot td{font-weight:800;background:var(--chip);border-bottom:0}
 .hint{background:#fff6e0;border-left:4px solid #e0a020;padding:10px 12px;border-radius:8px;font-size:.88rem;margin-top:12px}
 .arr-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.arr-h h3{margin:0}
 .foto{max-width:100%;border-radius:8px;margin-top:6px;max-height:180px;display:block}
+.fotos{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.fotos img{width:72px;height:72px;object-fit:cover;border-radius:8px;display:block}.fotos .fw{position:relative}.fotos .fx{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--err);color:#fff;font-weight:800;font-size:.8rem;line-height:22px;padding:0}
+.brs input{margin-bottom:6px}
 .list-it{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
 .list-it:last-child{border:0}
 .clic{cursor:pointer;-webkit-tap-highlight-color:transparent}.clic:active{background:var(--chip)}
@@ -171,7 +173,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='30';
+const APP_VERSAO='31';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -325,9 +327,10 @@ function estoque(){
 }
 
 /* ===================== ENTRADA / SAÍDA / MORTE / TRANSFERÊNCIA ===================== */
-let fotoTmp='',EDIT=null;
+let FOTOS=[],EDIT=null;const MAXF=10;
+const fotosDe=m=>String(m&&m.foto||'').split(' | ').filter(Boolean);
 function formMov(tipo,ed){
-  fotoTmp='';EDIT=ed||null;
+  FOTOS=[];EDIT=ed||null;
   const ehT=tipo==='TRANSF',ehM=tipo==='MORTE';
   $('#cx').innerHTML=`<div class="card">
     ${EDIT?`<div class="hint" style="margin:0 0 6px">✏️ Editando lançamento de ${fmtD(EDIT.data)}</div>`:''}<label>Data</label>${campoData('fData',EDIT?EDIT.data:hoje())}
@@ -340,9 +343,9 @@ function formMov(tipo,ed){
         <div class="row"><div><label>Proprietário</label><select id="fTrNP"><option value="">SELECIONE</option>${DB.props.map(p=>`<option>${p}</option>`).join('')}</select></div><div><label>Valor (cab/mês)</label><input id="fTrNV" type="text" inputmode="numeric" class="moeda"></div></div></div></div></div>`:''}
     ${ehT?`<label>Lote de destino</label><select id="fDest"><option value="">SELECIONE</option>${optLotes()}</select>`:''}
 
-    <label>Quantidade</label><input type="number" inputmode="numeric" id="fQtd" value="${ehM?1:''}" ${ehM?'readonly':''}>
-    ${ehM?`<label>Brinco do animal</label><input id="fBrinco">
-      <label>Foto</label><label class="filebtn" style="text-transform:none;letter-spacing:0;font-size:1rem;margin:0">📷 Tirar ou escolher foto<input type="file" accept="image/*" id="fFoto"></label><img id="fPrev" class="foto" style="display:none">
+    <label>Quantidade</label><input type="number" inputmode="numeric" id="fQtd" min="1" value="${ehM?1:''}">
+    ${ehM?`<label id="fBrLbl">Brinco do animal (opcional)</label><div id="fBrs" class="brs"></div>
+      <label>Fotos (até ${MAXF})</label><label class="filebtn" id="fFotoBt" style="text-transform:none;letter-spacing:0;font-size:1rem;margin:0">📷 Tirar ou escolher fotos<input type="file" accept="image/*" multiple id="fFoto"></label><div id="fPrev" class="fotos"></div>
       <label>Causa / observação</label><input id="fObs">`:`
     <div class="row"><div><label>Peso total (kg)</label><input type="number" inputmode="decimal" id="fPeso"></div>
     <div><label>Peso médio (kg)</label><input type="number" inputmode="decimal" id="fPMed"></div></div>
@@ -374,19 +377,26 @@ function formMov(tipo,ed){
     const v=mv('fValor');
     $('#fMedio').innerHTML=[arr?'Arrobas: <b>'+N(arr)+' @</b>'+(q?' ('+N(arr/q)+' @/cab)':''):'',q&&v?'Valor por cabeça: <b>'+R$(v/q)+'</b>':'',p&&v?'R$/kg: <b>'+N(v/p)+'</b>':''].filter(Boolean).join(' · ')};
   if(!ehM){$('#fQtd').oninput=()=>calc('qtd');$('#fPeso').oninput=()=>calc('peso');$('#fPMed').oninput=()=>calc('pmed');$('#fArroba').oninput=()=>{ultDin='arroba';calc('arroba')};$('#fValor').oninput=()=>{ultDin='valor';calc('valor')};}
-  else $('#fFoto').onchange=e=>reduzFoto(e.target.files[0]);
+  else{$('#fFoto').onchange=e=>{const fs=[...e.target.files];if(FOTOS.length+fs.length>MAXF)toast('Máximo de '+MAXF+' fotos');fs.slice(0,MAXF-FOTOS.length).forEach(reduzFoto);e.target.value=''};
+    $('#fQtd').oninput=()=>montaBrincos();montaBrincos(EDIT?String(EDIT.brinco||'').split(',').map(x=>x.trim()):[]);mostraFotos()}
   if(EDIT){const e=EDIT,sv=(id,v)=>{const x=$('#'+id);if(x&&v!==undefined&&v!==null)x.value=v};
     sv('fQtd',e.qtd);sv('fLote',e.loteId);sv('fDest',e.loteDest);sv('fPeso',e.peso);smv('fArroba',e.precoArroba);smv('fValor',e.valor);sv('fBrinco',e.brinco);sv('fObs',e.obs);if(e.subtipo)sv('fSub',e.subtipo);else if($('#fSub')){$('#fSub').insertAdjacentHTML('afterbegin','<option value="">—</option>');$('#fSub').value=''}
     if(tipo==='ENTRADA'&&e.origem){$('#fOrig').value=e.origem;$('#fSub').onchange()}
     if(tipo==='SAIDA'&&e.destino){const o=[...$('#fTrDest').options].find(o=>o.value==='FAZ:'+e.destino);if(o)$('#fTrDest').value=o.value;$('#fSub').onchange()}
-    if(e.foto){fotoTmp=e.foto;$('#fPrev').src=e.foto;$('#fPrev').style.display=''}
+    if(ehM){FOTOS=fotosDe(e);montaBrincos(String(e.brinco||'').split(',').map(x=>x.trim()));mostraFotos()}
     if(!ehM)calc('peso');scrollTo(0,0)}
   listaMov($('#ult'),DB.movs.filter(m=>m.tipo===tipo||(tipo==='SAIDA'&&m.tipo==='TRANSF'&&m.subtipo==='TRANSFERÊNCIA')).slice(-5).reverse());
 }
-function reduzFoto(f){if(!f)return;const r=new FileReader();r.onload=ev=>{const im=new Image();im.onload=()=>{const k=Math.min(1,800/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);fotoTmp=c.toDataURL('image/jpeg',.7);$('#fPrev').src=fotoTmp;$('#fPrev').style.display=''};im.src=ev.target.result};r.readAsDataURL(f)}
+function reduzFoto(f){if(!f)return;const r=new FileReader();r.onload=ev=>{const im=new Image();im.onload=()=>{if(FOTOS.length>=MAXF)return;const k=Math.min(1,800/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);FOTOS.push(c.toDataURL('image/jpeg',.7));mostraFotos()};im.src=ev.target.result};r.readAsDataURL(f)}
+function mostraFotos(){const el=$('#fPrev');if(!el)return;el.innerHTML=FOTOS.map((f,i)=>`<div class="fw"><img src="${f}"><button type="button" class="fx" onclick="FOTOS.splice(${i},1);mostraFotos()">✕</button></div>`).join('');
+  const bt=$('#fFotoBt');if(bt)bt.style.display=FOTOS.length>=MAXF?'none':''}
+function montaBrincos(ini){const box=$('#fBrs');if(!box)return;const atual=ini||[...box.querySelectorAll('input')].map(x=>x.value);
+  const q=Math.max(1,Math.min(200,+$('#fQtd').value||1));
+  box.innerHTML=Array.from({length:q},(_,i)=>`<input class="fBr" placeholder="${q>1?'Brinco '+(i+1):'Brinco'}" value="${(atual[i]||'').replace(/"/g,'&quot;')}">`).join('');
+  $('#fBrLbl').textContent=q>1?'Brincos dos animais (opcional)':'Brinco do animal (opcional)'}
 function salvarMov(tipo){
   const m={id:EDIT?EDIT.id:nid('M'),criadoEm:EDIT?EDIT.criadoEm:undefined,tipo,data:$('#fData').value,loteId:$('#fLote').value,qtd:+$('#fQtd').value,sexo:sexoLote(loteDe($('#fLote').value)),categoria:catLote(loteDe($('#fLote').value)),
-    peso:$('#fPeso')?+$('#fPeso').value||'':'',valor:$('#fValor')?mv('fValor')||'':'',subtipo:$('#fSub')?$('#fSub').value:'',precoArroba:$('#fArroba')?mv('fArroba')||'':'',divArroba:$('#fArroba')?30:'',brinco:$('#fBrinco')?$('#fBrinco').value.trim():'',foto:fotoTmp,obs:$('#fObs').value.trim()};
+    peso:$('#fPeso')?+$('#fPeso').value||'':'',valor:$('#fValor')?mv('fValor')||'':'',subtipo:$('#fSub')?$('#fSub').value:'',precoArroba:$('#fArroba')?mv('fArroba')||'':'',divArroba:$('#fArroba')?30:'',brinco:[...document.querySelectorAll('#fBrs .fBr')].map(x=>x.value.trim()).filter(Boolean).join(', '),foto:FOTOS.join(' | '),obs:$('#fObs').value.trim()};
   if($('#fSub')&&!m.subtipo)return toast('Selecione o tipo');if(!m.loteId)return toast('Selecione o lote');
   if(tipo==='TRANSF'){m.loteDest=$('#fDest').value;if(!m.loteDest)return toast('Selecione o lote de destino')}
   if(tipo==='ENTRADA'&&m.subtipo==='TRANSFERÊNCIA DE FAZENDA PRÓPRIA'){m.origem=$('#fOrig').value;if(!m.origem)return toast('Escolha a fazenda de origem')}
@@ -409,11 +419,11 @@ function salvarMov(tipo){
 function listaMov(el,ms){
   if(!ms.length){el.innerHTML='<p class="mut">Nenhum lançamento.</p>';return}
   const T={ENTRADA:['E','Entrada'],SAIDA:['S','Saída'],MORTE:['M','Morte'],TRANSF:['T','Transf.']};
-  el.innerHTML=ms.map(m=>`<div class="list-it"><div>${(()=>{const l=loteDe(m.loteId)||{};const ex=[m.tipo==='TRANSF'?'→ '+nomeLote(m.loteDest):'',m.tipo==='SAIDA'&&m.destino?'→ '+m.destino:'',m.origem?'de '+m.origem:'',m.peso?N(m.peso)+' kg ('+N(m.peso/m.qtd)+' méd)':'',m.precoArroba?R$(m.precoArroba)+'/@':'',m.valor?R$(m.valor):'',m.brinco?'brinco '+m.brinco:'',m.obs||''].filter(Boolean).join(' · ');
+  el.innerHTML=ms.map(m=>`<div class="list-it"><div>${(()=>{const l=loteDe(m.loteId)||{};const ex=[m.tipo==='TRANSF'?'→ '+nomeLote(m.loteDest):'',m.tipo==='SAIDA'&&m.destino?'→ '+m.destino:'',m.origem?'de '+m.origem:'',m.peso?N(m.peso)+' kg ('+N(m.peso/m.qtd)+' méd)':'',m.precoArroba?R$(m.precoArroba)+'/@':'',m.valor?R$(m.valor):'',m.brinco?(m.brinco.includes(',')?'brincos ':'brinco ')+m.brinco:'',m.obs||''].filter(Boolean).join(' · ');
    return `<b>${fmtD(m.data)}</b> - <span class="tag ${T[m.tipo][0]}">${T[m.tipo][1]}</span>${m.subtipo?' - <b>'+m.subtipo+'</b>':''}<br>
    ${arrDe(l.arrId).nome||'—'} - ${l.prop||'—'}<br>
    <b>${m.qtd} cab</b> - ${catLote(l)||m.categoria||sufLote(l)||'sem categoria'}${ex?`<br><span class="mut">${ex}</span>`:''}`})()}
-   ${m.foto?`<img src="${m.foto}" class="foto">`:''}</div>
+   ${m.foto?`<div class="fotos">${fotosDe(m).map(f=>`<a href="${f}" target="_blank"><img src="${f}"></a>`).join('')}</div>`:''}</div>
    <div class="acoes"><button class="icb" title="Editar" onclick="editarMov('${m.id}')">✏️</button><button class="icb del" title="Excluir" onclick="excluirMov('${m.id}')">✕</button></div></div>`).join('');
 }
 const TELA_TIPO={ENTRADA:'entrada',SAIDA:'saida',MORTE:'morte',TRANSF:'transf'};
@@ -423,7 +433,7 @@ function excluirMov(id){if(!confirmar('Excluir este lançamento?',()=>{del('movs
 /* ===================== MOVIMENTAÇÕES (histórico) ===================== */
 function historico(){
   $('#cx').innerHTML=`<div class="card fBox">${filtroSel('hA','Parceiro',[['','Todos'],...DB.arr.map(a=>[a.id,a.nome])],'')}
-  ${filtroSel('hT','Tipo',[['','Todos'],['ENTRADA','Entradas'],['SAIDA','Saídas'],['MORTE','Mortes'],['TRANSF','Transferências']],'')}</div>
+  ${filtroSel('hT','Tipo',[['','Todos'],['ENTRADA','Entradas'],['SAIDA','Saídas'],['TRANSF','Transferências'],['MORTE','Mortes']],'')}</div>
   <div class="card" id="hL"></div>`;
   const r=()=>{const a=$('#hA').value,t=$('#hT').value;
     const ms=DB.movs.filter(m=>(!t||m.tipo===t)&&(!a||loteDe(m.loteId).arrId===a||(m.loteDest&&loteDe(m.loteDest).arrId===a))).sort((x,y)=>y.data.localeCompare(x.data));
@@ -450,10 +460,11 @@ function calcFatura(ym){
 }
 let FAT={};
 function faturas(){syncProvisoes();
-  const d=new Date();const ym0=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  const d=new Date();let ym0=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(ym0<INI_PAG)ym0=INI_PAG;
   $('#cx').innerHTML=`<div class="card fBox">${filtroMes('fM','Mês',FAT.ym||ym0)}${filtroSel('fA','Parceiro',[['','Todos'],...DB.arr.filter(a=>a.ativo).map(a=>[a.id,a.nome])],FAT.arr||'')}</div><div id="fR"></div>
   <div class="hint"><b>Como calcula:</b> valor por cabeça ÷ 30 × dias. Mês fechado = 30 dias. Entrou dia 10 → 20 dias (mês de 30) ou 21 (mês de 31). Saída, morte e transferência cobram até o dia em que saiu.</div>`;
-  const r=()=>{const ym=$('#fM').value;if(!ym)return;const fa=$('#fA').value;FAT.ym=ym;FAT.arr=fa;const F=calcFatura(ym);let html='',tg=0,ts=0;
+  const r=()=>{const ym=$('#fM').value;if(!ym)return;const fa=$('#fA').value;FAT.ym=ym;FAT.arr=fa;
+    if(quitado(ym)){$('#fR').innerHTML='<div class="card mut" style="text-align:center">Até 11/2026 está tudo quitado (lançado na planilha anterior).<br>As faturas começam em <b>12/2026</b>.</div>';return}const F=calcFatura(ym);let html='',tg=0,ts=0;
     DB.arr.filter(a=>!fa||a.id===fa).forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length)return;let ta=0,sa=0;
       const rows=fs.map(x=>{ta+=x.valor;sa+=x.salario;return `<tr><td>${catLote(x.l)||x.l.nome}<br><span class="mut">${x.l.prop} · ${R$(x.l.valorCab)}/cab</span></td><td class="n">${x.cabIni}</td><td class="n">${x.ent?'+'+x.ent:''}${x.sai?' −'+x.sai:''}</td><td class="n">${N(x.cd/30)}</td><td class="n"><b>${R$(x.valor)}</b></td></tr>`}).join('');
       const taC=ta,saC=sa,ajP=ajDe(a.id,ym,'P'),ajS=ajDe(a.id,ym,'S');if(ajP)ta=+ajP.valor;if(ajS)sa=+ajS.valor;
@@ -463,14 +474,15 @@ function faturas(){syncProvisoes();
 
 
       </table></div>${pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS)}</div>`});
-    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Aluguéis</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pp=DB.pags.filter(p=>p.ref===ym&&(!fa||p.arrId===fa)),pg=somaP(pp.filter(p=>!ehSal(p))),sg=somaP(pp.filter(ehSal));return `<tr><td>Aluguéis pagos</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Aluguéis à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>${ts?`<tr><td>Salários pagos</td><td class="n" style="color:var(--ok)">${R$(sg)}</td></tr><tr><td><b>Salários à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(ts)-sg,0))}</b></td></tr>`:''}`})()}</table></div>`};
+    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Aluguéis</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pp=DB.pags.filter(p=>p.ref===ym&&(!fa||p.arrId===fa)),q=quitado(ym),pg=q?r2(tg):somaP(pp.filter(p=>!ehSal(p))),sg=q?r2(ts):somaP(pp.filter(ehSal));return `<tr><td>Aluguéis pagos</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Aluguéis à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>${ts?`<tr><td>Salários pagos</td><td class="n" style="color:var(--ok)">${R$(sg)}</td></tr><tr><td><b>Salários à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(ts)-sg,0))}</b></td></tr>`:''}`})()}</table></div>`};
   $('#fM').onchange=r;$('#fA').onchange=r;r();
 }
 const r2=v=>Math.round((+v||0)*100)/100;
 const ehSal=p=>String(p.id).startsWith('PS_');const somaP=ps=>r2(ps.reduce((s,p)=>s+(+p.valor||0),0));
 const pagosDe=(arrId,ym,tp)=>DB.pags.filter(p=>p.arrId===arrId&&p.ref===ym&&(!tp||(tp==='S')===ehSal(p)));
+const INI_PAG='2026-12';const quitado=ym=>ym<INI_PAG;
 function pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS){
-  const bloco=(nome,tot,tp,calc,aj)=>{const ps=pagosDe(a.id,ym,tp),pg=somaP(ps),pend=r2(r2(tot)-pg);
+  const bloco=(nome,tot,tp,calc,aj)=>{if(quitado(ym))return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:var(--ok)">QUITADO</b></span><b style="color:var(--ok)">${R$(tot)}</b></div></div>`;const ps=pagosDe(a.id,ym,tp),pg=somaP(ps),pend=r2(r2(tot)-pg);
     return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${pend>0.004?'À PAGAR':'PAGO'}</b></span><b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${R$(pend>0.004?pend:pg)}</b></div>
     ${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
     ${pg&&pend>0.004?`<div class="pgL"><span class="mut">Pago</span><b style="color:var(--ok)">${R$(pg)}</b></div>`:''}
@@ -505,7 +517,7 @@ function ajustarValor(arrId,ym,tp,calc){const a=arrDe(arrId),aj=ajDe(arrId,ym,tp
   if(aj)m.querySelector('#ajR').onclick=()=>{del('ajus',aj.id);m.remove();toast('Voltou ao valor calculado');go(TELA)};
   m.querySelector('#ajS').onclick=()=>{const v=r2(mv('ajV'));put('ajus',{id:`AJ_${tp}_${arrId}_${ym}`,arrId,ref:ym,tipo:tp,valor:v,obs:$('#ajO').value.trim()});m.remove();toast('Valor ajustado ✓');go(TELA)}}
 /* lança/atualiza sozinho em Despesas o que falta pagar de cada mês (último dia do mês) */
-function syncProvisoes(){const ms=DB.movs.map(m=>m.data).filter(Boolean).sort();if(!ms.length)return;const ini=ms[0].slice(0,7),fim=hoje().slice(0,7);
+function syncProvisoes(){const ms=DB.movs.map(m=>m.data).filter(Boolean).sort();if(!ms.length)return;const ini=ms[0].slice(0,7)<INI_PAG?INI_PAG:ms[0].slice(0,7),fim=hoje().slice(0,7);
   const quer=new Map();let ym=ini;let g=0;
   while(ym<=fim&&g++<240){const F=calcFatura(ym),[Y,M]=ym.split('-').map(Number),ult=ym+'-'+String(new Date(Y,M,0).getDate()).padStart(2,'0'),rf=ym.slice(5)+'/'+ym.slice(0,4);
     DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length&&!DB.ajus.some(x=>x.arrId===a.id&&x.ref===ym))return;

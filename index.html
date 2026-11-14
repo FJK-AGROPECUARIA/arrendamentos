@@ -47,9 +47,10 @@ body.naInicio .topo{padding-top:14px;padding-bottom:14px}body.naInicio .topoTxt 
 .tiles small{font-size:.72rem;font-weight:700;opacity:.9;letter-spacing:.04em}
 .barra{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:var(--accent);color:#fff;font-size:.92rem;font-weight:700;border:0;width:100%;font-family:inherit;cursor:pointer}
 .tela{background:#fff;border-radius:14px;box-shadow:0 1px 5px rgba(0,0,0,.07);padding:8px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px 16px;margin-top:12px}
 .card h3{margin:0 0 10px;font-size:.95rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-left:5px solid var(--lima);padding-left:8px}
-label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px}
+label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:9px 0 2px}
+.card>label:first-child,.card>.hint:first-child+label{margin-top:0}
 input,select,textarea{width:100%;font:inherit;font-weight:600;color:var(--fg);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:10px 12px;min-height:46px}
 input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;display:block;min-width:0}
 input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
@@ -70,7 +71,7 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
 .btRow{display:flex;gap:8px;margin-top:14px}.btRow .bt{margin:0;flex:1;padding:9px 6px;font-size:1rem;color:#fff}.btRow .bt[hidden]{display:none}
 .bt.verde{background:#2e7d32;border-color:#2e7d32}.bt.verm{background:#c62828;border-color:#c62828}.bt.amar{background:#f2b705;border-color:#f2b705;color:#3a2a00!important}
 .bt.sm{display:inline-block;width:auto;margin:0;padding:7px 12px;font-size:.88rem}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:-7px 0 -6px}
 .kpi{background:#fff;border-radius:12px;padding:5px 6px;text-align:center;box-shadow:0 1px 5px rgba(0,0,0,.07)}
 .kpi b{display:block;line-height:1.15;font-size:1.35rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}.kpi span{display:block;line-height:1.1;font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 table{width:100%;border-collapse:collapse;font-size:.92rem;font-variant-numeric:tabular-nums}
@@ -173,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='32';
+const APP_VERSAO='33';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -285,7 +286,7 @@ function voltar(){const md=document.querySelector('.modal,.pk');if(md){md.remove
 const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'<span style="color:#fff;font-weight:900;font-family:Arial,sans-serif;line-height:1">$</span>',faturas:'🧾',historico:'<span style="display:inline-flex;align-items:center;gap:2px;line-height:1">🐂<span style="color:#fff;font-weight:900;font-family:Arial,sans-serif">⇄</span></span>',gestao:'⚙️',caixa:'💰',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
 const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#ae8a63',lotes:'#b0782a',gestao:'#11253d',caixa:'#8a6a1c'};
 function go(t){TELA=t;VOLTA=null;document.body.classList.toggle('naInicio',t==='menu');
-  if(t==='menu'){menu()}else{
+  if(t==='menu'){FL={loc:'',prop:'',inat:false};FAT={};DSF={};CXF='';menu()}else{
     $('#app').innerHTML=`<div class="tela"><button class="barra" onclick="voltar()"><span>☰ ${ICONES[t]} ${TITULOS[t]}</span><span>◀ voltar</span></button><div id="cx"></div></div>`;
     TELAS[t]()}
   syncSels();status();scrollTo(0,0)}

@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='35';
+const APP_VERSAO='36';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -286,7 +286,7 @@ function voltar(){const md=document.querySelector('.modal,.pk');if(md){md.remove
 const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'<span style="color:#fff;font-weight:900;font-family:Arial,sans-serif;line-height:1">$</span>',faturas:'🧾',historico:'<span style="display:inline-flex;align-items:center;gap:2px;line-height:1">🐂<span style="color:#fff;font-weight:900;font-family:Arial,sans-serif">⇄</span></span>',gestao:'⚙️',caixa:'💰',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
 const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#ae8a63',lotes:'#b0782a',gestao:'#11253d',caixa:'#8a6a1c'};
 function go(t){TELA=t;VOLTA=null;document.body.classList.toggle('naInicio',t==='menu');
-  if(t==='menu'){FL={loc:'',prop:'',inat:false};FAT={};DSF={};CXF='';menu()}else{
+  if(t==='menu'){FL={loc:'',prop:'',inat:false};FAT={};DSF={};CXF='';CXM='';menu()}else{
     $('#app').innerHTML=`<div class="tela"><button class="barra" onclick="voltar()"><span>☰ ${ICONES[t]} ${TITULOS[t]}</span><span>◀ voltar</span></button><div id="cx"></div></div>`;
     TELAS[t]()}
   syncSels();status();scrollTo(0,0)}
@@ -496,8 +496,8 @@ function abrirPag(arrId,ym,pend,tp,ed){const sal=tp==='S';const a=arrDe(arrId);c
   <label>Valor (R$)</label><input id="pgV" type="text" inputmode="numeric" class="moeda" value="${fmtMoeda(ed?ed.valor:pend)}">
   ${campoPagador('pg',ed&&ed.pagador,ed&&ed.conta)}
   <label>Observação</label><textarea id="pgO" rows="2">${esc(ed?ed.obs||'':'')}</textarea>
-  <div class="btRow"><button class="bt verm" id="pgN">Cancelar</button><button class="bt verde" id="pgS">Salvar</button></div></div>`;
-  document.body.appendChild(m);m.querySelector('#pgN').onclick=()=>m.remove();
+  <div class="btRow">${ed?'<button class="bt amar" id="pgE">Estornar</button>':''}<button class="bt verm" id="pgN">Cancelar</button><button class="bt verde" id="pgS">Salvar</button></div></div>`;
+  document.body.appendChild(m);m.querySelector('#pgN').onclick=()=>m.remove();if(ed)m.querySelector('#pgE').onclick=()=>{m.remove();delPag(ed.id)};
   m.querySelector('#pgS').onclick=()=>{const v=r2(mv('pgV')),dt=$('#pgD').value;if(!dt)return toast('Informe a data');if(!(v>0))return toast('Informe o valor');
     if(v>pend+0.004)return toast('Valor maior que o à pagar ('+R$(pend)+')');const pc=lerPagador('pg');if(!pc.conta)return toast('Informe a conta de pagamento');
     const pid=ed?ed.id:(sal?nid('PS_'):nid('P')),conta=pc.conta,pagador=pc.pagador,ob=$('#pgO').value.trim(),rf=ym.slice(5)+'/'+ym.slice(0,4);
@@ -527,7 +527,7 @@ function syncProvisoes(){const ms=DB.movs.map(m=>m.data).filter(Boolean).sort();
     ym=M===12?(Y+1)+'-01':Y+'-'+String(M+1).padStart(2,'0')}
   DB.desp.filter(d=>String(d.id).startsWith('DV')&&!quer.has(d.id)).map(d=>d.id).forEach(id=>del('desp',id));
   quer.forEach((v,id)=>{const o=DB.desp.find(d=>d.id===id);if(!o||o.valor!==v.valor||o.data!==v.data||o.status!==v.status||o.desc!==v.desc)put('desp',{...(o||{}),id,...v})})}
-function delPag(id){confirmar('Excluir este pagamento? A despesa lançada junto também será excluída.',()=>{del('pags',id);if(DB.desp.some(d=>d.id==='D'+id))del('desp','D'+id);go(TELA==='despesas'?'despesas':'faturas')})}
+function delPag(id){confirmar('Estornar este pagamento? Ele sai das despesas pagas e o valor volta a ficar À PAGAR.',()=>{del('pags',id);if(DB.desp.some(d=>d.id==='D'+id))del('desp','D'+id);toast('Pagamento estornado ✓');go(TELA==='despesas'?'despesas':'faturas')})}
 function gerarDespesas(ym){
   const F=calcFatura(ym);const [Y,M]=ym.split('-');const ref=M+'/'+Y;let n=0;
   DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);fs.forEach(x=>{
@@ -610,16 +610,20 @@ function extrato(p){const it=[];
   it.sort((a,b)=>a.data.localeCompare(b.data));let s=0;it.forEach(x=>{s=r2(s+x.v);x.saldo=s});return it}
 const saldoCx=p=>{const e=extrato(p);return e.length?e[e.length-1].saldo:0};
 const rotSaldo=v=>v>0.004?`<b style="color:var(--ok)">Saldo ${R$(v)}</b>`:v<-0.004?`<b style="color:var(--err)">Deve ${R$(-v)}</b>`:'<b class="mut">Acertado</b>';
-let CXF='';
-function caixa(){const ps=DB.props.filter(p=>p!==PAG0);if(!CXF||!ps.includes(CXF))CXF=ps[0]||'';
+let CXF='',CXM='';
+const mesItem=x=>x.d&&x.d.ref&&/^\d\d\/\d{4}$/.test(x.d.ref)?x.d.ref.slice(3)+'-'+x.d.ref.slice(0,2):x.data.slice(0,7);
+const saldoAte=(p,ym)=>r2(extrato(p).filter(x=>mesItem(x)<=ym).reduce((s,x)=>s+x.v,0));
+function caixa(){const ps=DB.props.filter(p=>p!==PAG0);if(CXF&&!ps.includes(CXF))CXF='';if(!CXM){CXM=hoje().slice(0,7);if(CXM<INI_PAG)CXM=INI_PAG}
   $('#cx').innerHTML=`<div class="row" style="margin-top:12px"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','APORTE')">+ Saldo</button><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','ACERTO')">Acerto</button></div>
   <div class="card" id="cxForm" hidden></div>
-  <div class="card"><h3>Extrato com a FJK</h3>${ps.map(p=>`<div class="list-it" style="cursor:pointer" onclick="CXF='${p}';caixa()"><b>${p}</b><span>${rotSaldo(saldoCx(p))}</span></div>`).join('')||'<p class="mut">Nenhum proprietário além da FJK.</p>'}</div>
-  ${CXF?`<div class="card fBox">${filtroSel('cxP','Proprietário',ps.map(p=>[p,p]),CXF)}</div><div class="card" id="cxExt"></div>`:''}
-  <div class="hint">Despesas pagas pela FJK que são de outro proprietário entram como débito dele. Acertos e saldo colocado entram como crédito. Conta a partir de ${INI_PAG.slice(5)}/${INI_PAG.slice(0,4)}.</div>`;
-  if(CXF){$('#cxP').onchange=()=>{CXF=$('#cxP').value;caixa()};const e=extrato(CXF).reverse();
-    $('#cxExt').innerHTML=`<h3>Extrato · ${CXF}</h3>`+(e.map(x=>`<div class="list-it"><div><b style="color:${x.v<0?'var(--err)':'var(--ok)'}">${x.v<0?'−':'+'} ${R$(Math.abs(x.v))}</b> · ${fmtD(x.data)}<br><span class="mut">${esc(x.txt)}</span><br><span class="mut" style="font-size:.78rem">saldo depois: ${R$(x.saldo)}</span></div>
-      ${x.c?`<div class="acoes"><button class="icb" onclick="abrirCx('${x.c.id}')">✏️</button><button class="icb del" onclick="confirmar('Excluir este lançamento do caixa?',()=>{del('caixa','${x.c.id}');caixa()})">✕</button></div>`:''}</div>`).join('')||'<p class="mut">Nenhum lançamento.</p>')}}
+  <div class="card fBox">${filtroMes('cxM','Mês',CXM)}${filtroSel('cxP','Proprietário',[['','Todos'],...ps.map(p=>[p,p])],CXF)}</div>
+  <div class="card"><h3>Extrato com a FJK</h3>${ps.filter(p=>!CXF||p===CXF).map(p=>`<div class="list-it" style="cursor:pointer" onclick="CXF='${p}';caixa()"><b>${p}</b><span>${rotSaldo(saldoAte(p,CXM))}</span></div>`).join('')||'<p class="mut">Nenhum proprietário além da FJK.</p>'}</div>
+  <div class="card" id="cxExt"></div>
+  <div class="hint">Despesas pagas pela FJK que são de outro proprietário entram como débito dele. Acertos e saldo colocado entram como crédito. Saldo acumulado até o fim do mês escolhido. Conta a partir de ${INI_PAG.slice(5)}/${INI_PAG.slice(0,4)}.</div>`;
+  $('#cxP').onchange=()=>{CXF=$('#cxP').value;caixa()};$('#cxM').onchange=()=>{CXM=$('#cxM').value||CXM;caixa()};
+  const e=ps.filter(p=>!CXF||p===CXF).flatMap(p=>extrato(p).map(x=>({...x,p}))).filter(x=>mesItem(x)===CXM).sort((a,b)=>b.data.localeCompare(a.data));
+  $('#cxExt').innerHTML=`<h3>Extrato · ${CXF||'Todos'} · ${CXM.slice(5)}/${CXM.slice(0,4)}</h3>`+(e.map(x=>`<div class="list-it"><div><b style="color:${x.v<0?'var(--err)':'var(--ok)'}">${x.v<0?'−':'+'} ${R$(Math.abs(x.v))}</b> · ${fmtD(x.data)}${CXF?'':' · <b>'+x.p+'</b>'}<br><span class="mut">${esc(x.txt)}</span><br><span class="mut" style="font-size:.78rem">saldo depois: ${R$(x.saldo)}</span></div>
+      ${x.c?`<div class="acoes"><button class="icb" onclick="abrirCx('${x.c.id}')">✏️</button><button class="icb del" onclick="confirmar('Excluir este lançamento do caixa?',()=>{del('caixa','${x.c.id}');caixa()})">✕</button></div>`:''}</div>`).join('')||'<p class="mut">Nenhum lançamento no mês.</p>')}
 function abrirCx(id,tp){const c=id?DB.caixa.find(x=>x.id===id):null;tp=c?c.tipo:tp;VOLTA=()=>caixa();const ps=DB.props.filter(p=>p!==PAG0);
   const f=$('#cxForm');f.hidden=false;f.innerHTML=`<h3>${c?'Editar lançamento':(CXT[tp]||['Novo lançamento'])[0]}</h3>
   <label>Data</label>${campoData('cxD',c?c.data:hoje())}
@@ -631,7 +635,7 @@ function abrirCx(id,tp){const c=id?DB.caixa.find(x=>x.id===id):null;tp=c?c.tipo:
   <div class="btRow"><button class="bt verm" onclick="caixa()">Cancelar</button><button class="bt verde" onclick="salvarCx('${c?c.id:''}')">Salvar</button></div>`;
   syncSels();scrollTo(0,0)}
 function salvarCx(id){const v=r2(mv('cxV')),p=$('#cxPr').value,t=$('#cxT').value;if(!p)return toast('Selecione o proprietário');if(!t)return toast('Selecione o tipo');if(!(v>0))return toast('Informe o valor');
-  const o=id&&DB.caixa.find(x=>x.id===id)||{};put('caixa',{...o,id:o.id||nid('CX'),data:$('#cxD').value,prop:p,tipo:t,valor:v,conta:$('#cxC').value,obs:$('#cxO').value.trim()});CXF=p;toast('Lançado ✓');caixa()}
+  const o=id&&DB.caixa.find(x=>x.id===id)||{};put('caixa',{...o,id:o.id||nid('CX'),data:$('#cxD').value,prop:p,tipo:t,valor:v,conta:$('#cxC').value,obs:$('#cxO').value.trim()});toast('Lançado ✓');caixa()}
 function addConta(p){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:420px;text-align:left"><h3 style="margin-top:0">Nova conta · ${esc(p)}</h3><label>Nome da conta</label><input id="ncN" placeholder="Ex.: SICREDI KASSANDRA"><div class="btRow"><button class="bt verm" id="ncX">Cancelar</button><button class="bt verde" id="ncS">Salvar</button></div></div>`;
   document.body.appendChild(m);m.querySelector('#ncX').onclick=()=>m.remove();m.querySelector('#ncN').focus();
   m.querySelector('#ncS').onclick=()=>{const n=$('#ncN').value.trim().toUpperCase();if(!n)return toast('Informe o nome');if(contasDe(p).includes(n))return toast('Conta já cadastrada');put('contas',{id:idConta(p,n),prop:p,nome:n});m.remove();gestao()}}
@@ -846,7 +850,7 @@ async function checarVersao(){if(!navigator.onLine||location.protocol!=='https:'
 let telaIni='menu';try{const vp=sessionStorage.getItem('voltarPara');sessionStorage.removeItem('voltarPara');if(vp&&TELAS[vp]&&vp!=='gestao')telaIni=vp;
   const rp=sessionStorage.getItem('recarregadoPara');if(rp&&rp.split('|')[0]===APP_VERSAO&&Date.now()-(+rp.split('|')[1]||0)<60000)setTimeout(()=>toast('App atualizado para v'+APP_VERSAO+' ✓'),600)}catch(e){}
 go(telaIni);carregar();
-setTimeout(checarVersao,3000);setInterval(checarVersao,3*60000);
+setTimeout(checarVersao,3000);setInterval(()=>{if(document.visibilityState==='visible')checarVersao()},30000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){checarVersao()}});
 window.addEventListener('online',checarVersao);
 if('serviceWorker' in navigator&&location.protocol==='https:'){

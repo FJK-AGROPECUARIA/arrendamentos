@@ -148,7 +148,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='12';
+const APP_VERSAO='13';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -510,7 +510,7 @@ function telaLocais(){setTimeout(syncSels);
   $('#llLst').innerHTML=vis.map(a=>{const ls=DB.lotes.filter(l=>l.arrId===a.id&&(!FL.prop||l.prop===FL.prop)&&(FL.inat?(!a.ativo||!l.ativo):l.ativo));
     if(FL.inat?(a.ativo&&!ls.length):!a.ativo)return'';if(!FL.inat&&FL.prop&&!ls.length)return'';const cab=ls.filter(l=>l.ativo).reduce((s,l)=>s+saldo(l.id),0);
     return `<div class="card">
-    <div class="arr-h clic" onclick="editArr('${a.id}')"><div><h3>${a.nome}</h3><div class="mut">${a.cidade} · ${cab} cab${a.ativo?'':' · <b style="color:var(--err)">inativo</b>'}</div></div><span class="seta">›</span></div>
+    <div class="arr-h clic" onclick="editArr('${a.id}')"><div><h3 style="letter-spacing:.02em">${a.nome} - ${a.cidade} - <span style="text-transform:none">${cab} cab</span>${a.ativo?'':' · <span style="color:var(--err)">inativo</span>'}</h3></div><span class="seta">›</span></div>
     ${ls.map(l=>`<div class="list-it clic" onclick="editLote('${l.id}')"><div><b>${rotLote(l).split(' - ').slice(1,-1).join(' - ')}</b> <span class="tag">${l.prop}</span>${catLote(l)?'':' <span class="tag M">sem categoria</span>'}<br>
     <span class="mut">${saldo(l.id)} cab · ${R$(l.valorCab)}/cab/mês${l.salario?' · salário '+R$(l.salario):''}${l.ativo?'':' · <b style="color:var(--err)">inativo</b>'}</span></div><span class="seta">›</span></div>`).join('')||'<p class="mut">Nenhum lote.</p>'}</div>`}).join('')||`<div class="card mut">${FL.inat?'Nenhum local ou lote inativo.':'Nenhum local.'}</div>`;
 }

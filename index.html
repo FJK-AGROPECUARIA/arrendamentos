@@ -140,7 +140,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='6';
+const APP_VERSAO='7';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -227,9 +227,9 @@ document.addEventListener('change',e=>{const i=e.target;if(i.closest&&i.closest(
 
 /* ===================== NAVEGAÇÃO ===================== */
 const TELAS={menu,estoque,entrada:()=>formMov('ENTRADA'),saida:()=>formMov('SAIDA'),morte:()=>formMov('MORTE'),transf:()=>formMov('TRANSF'),despesas,faturas,historico,gestao,arrend:telaLocais,lotes:telaLocais};
-const TITULOS={menu:'Gestão de Arrendamentos',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',arrend:'Local/Lotes',lotes:'Local/Lotes'};
+const TITULOS={menu:'Gestão de Arrendamentos',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',arrend:'Local e Lotes',lotes:'Local e Lotes'};
 let TELA='menu';
-const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'💲',faturas:'🧾',historico:'📋',gestao:'⚙️',arrend:'🏡',lotes:'🏷️'};
+const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'💲',faturas:'🧾',historico:'📋',gestao:'⚙️',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
 const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#8a6a4a',lotes:'#b0782a',gestao:'#11253d'};
 function go(t){TELA=t;document.body.classList.toggle('naInicio',t==='menu');
   if(t==='menu'){menu()}else{
@@ -242,7 +242,7 @@ function menu(){
   $('#app').innerHTML=`
   <div class="kpis"><div class="kpi"><b>${N(tot)}</b><span>cabeças</span></div><div class="kpi"><b>${DB.arr.filter(a=>a.ativo).length}</b><span>locais</span></div><div class="kpi"><b>${lotes.length}</b><span>lotes</span></div></div>
   <div class="tiles">
-    ${tile('arrend','Local/Lotes',1)}
+    ${tile('arrend','Local e Lotes',1)}
     ${tile('entrada','Entrada')}${tile('saida','Saídas/Transf')}
     ${tile('morte','Morte')}${tile('historico','Movimentações')}
     ${tile('despesas')}${tile('faturas')}

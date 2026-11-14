@@ -56,6 +56,7 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
 .row{display:flex;gap:10px;align-items:flex-end}.row>*{flex:1;min-width:0}
 .bt{display:block;width:100%;margin-top:14px;background:var(--accent);border:2px solid var(--accent);color:#fff;border-radius:10px;padding:14px;font:inherit;font-size:1.1rem;font-weight:700;cursor:pointer}
 .bt.sec{background:#fff;color:var(--accent)}.bt.sec:active{background:var(--accent);color:#fff}
+.fat{font-size:.8rem}.fat th,.fat td{padding-left:3px;padding-right:3px}.fat th{font-size:.62rem;letter-spacing:.02em}
 .btRow{display:flex;gap:8px;margin-top:14px}.btRow .bt{margin:0;flex:1;padding:9px 6px;font-size:1rem;color:#fff}.btRow .bt[hidden]{display:none}
 .bt.verde{background:#2e7d32;border-color:#2e7d32}.bt.verm{background:#c62828;border-color:#c62828}.bt.amar{background:#f2b705;border-color:#f2b705;color:#3a2a00!important}
 .bt.sm{display:inline-block;width:auto;margin:0;padding:7px 12px;font-size:.88rem}
@@ -142,11 +143,11 @@ function semente(){
     ['A9','LUIZ PORTO - MACHOS','JUNIOR-MURILO',78]];
   const lotes=L.map((l,i)=>({id:'L'+(i+1),arrId:l[0],nome:l[1],prop:l[2],valorCab:0,salario:0,ativo:true}));
   const movs=L.map((l,i)=>({id:'M'+(i+1),data:'2026-10-31',tipo:'ENTRADA',loteId:'L'+(i+1),qtd:l[3],sexo:'',peso:'',valor:'',brinco:'',foto:'',obs:'SALDO INICIAL (importado da planilha)'}));
-  return {arr,lotes,movs,desp:[],props:PROPS0.slice(),seq:100};
+  return {arr,lotes,movs,desp:[],pags:[],props:PROPS0.slice(),seq:100};
 }
 let DB;
 try{DB=JSON.parse(localStorage.getItem(LS))}catch(e){}
-if(!DB)DB=semente();
+if(!DB)DB=semente();if(!DB.pags)DB.pags=[];
 if(!DB.props)DB.props=PROPS0.slice();
 const PROPS=new Proxy([], {get:(t,k)=>{const v=DB.props[k];return typeof v==='function'?v.bind(DB.props):v}});
 function salvar(){try{localStorage.setItem(LS,JSON.stringify(DB))}catch(e){}}
@@ -156,7 +157,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='15';
+const APP_VERSAO='16';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -188,13 +189,13 @@ async function carregar(){
   if(!api())return status();await enviar();if(FILA.length)return;
   try{const r=await fetch(api()+'?acao=tudo');const j=await r.json();if(!j.ok)throw 0;online=true;
     const d=j.dados;DB.planilha=j.planilha;DB.ultSync=Date.now();
-    if(d.arr.length){DB.arr=d.arr.map(normal);DB.lotes=d.lotes.map(normal);DB.movs=d.movs.map(normal);DB.desp=d.desp.map(normal);
+    if(d.arr.length){DB.arr=d.arr.map(normal);DB.lotes=d.lotes.map(normal);DB.movs=d.movs.map(normal);DB.desp=d.desp.map(normal);DB.pags=(d.pags||[]).map(normal);
       if(d.props.length)DB.props=d.props.map(p=>p.nome);DB.servidorVazio=false}else DB.servidorVazio=true;
     salvar();go(TELA)}catch(e){online=false}
   status();
 }
 function enviarTudo(){DB.props.forEach(p=>FILA.push({acao:'salvar',tabela:'props',reg:{id:p,nome:p}}));
-  ['arr','lotes','movs','desp'].forEach(t=>DB[t].forEach(reg=>FILA.push({acao:'salvar',tabela:t,reg})));
+  ['arr','lotes','movs','desp','pags'].forEach(t=>(DB[t]||[]).forEach(reg=>FILA.push({acao:'salvar',tabela:t,reg})));
   DB.servidorVazio=false;salvarFila();salvar();enviar();toast(FILA.length+' registros na fila de envio')}
 addEventListener('online',enviar);setInterval(enviar,60000);
 
@@ -437,14 +438,36 @@ function faturas(){
     DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length)return;let ta=0,sa=0;
       const rows=fs.map(x=>{ta+=x.valor;sa+=x.salario;return `<tr><td>${catLote(x.l)||x.l.nome}<br><span class="mut">${x.l.prop} · ${R$(x.l.valorCab)}/cab</span></td><td class="n">${x.cabIni}</td><td class="n">${x.ent?'+'+x.ent:''}${x.sai?' −'+x.sai:''}</td><td class="n">${N(x.cd/30)}</td><td class="n"><b>${R$(x.valor)}</b></td></tr>`}).join('');
       tg+=ta;ts+=sa;
-      html+=`<div class="card"><div class="arr-h"><h3>${a.nome}</h3><span class="mut">${a.cidade}</span></div><div class="scroll"><table>
-      <tr><th>Lote</th><th class="n">Início</th><th class="n">Mov.</th><th class="n">Cab. mês</th><th class="n">Arrend.</th></tr>${rows}
-      <tr class="tot"><td colspan="4">Parceria a pagar</td><td class="n">${R$(ta)}</td></tr>
-      ${sa?`<tr><td colspan="4">Salário do mês <span class="mut">(despesa separada)</span></td><td class="n">${R$(sa)}</td></tr>`:''}</table></div></div>`});
-    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Parcerias</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr></table>
+      html+=`<div class="card"><div class="arr-h"><h3>${a.nome}</h3><span class="mut">${a.cidade}</span></div><div class="scroll"><table class="fat">
+      <tr><th>Lote</th><th class="n">Início</th><th class="n">Mov.</th><th class="n">Cab.</th><th class="n">Valor</th></tr>${rows}
+      <tr class="tot"><td colspan="4">Parceria do mês</td><td class="n">${R$(ta)}</td></tr>
+
+      ${sa?`<tr><td colspan="4">Salário do mês <span class="mut">(despesa separada)</span></td><td class="n">${R$(sa)}</td></tr>`:''}</table></div>${pagBloco(a,ym,ta)}</div>`});
+    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Parcerias</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pg=r2(DB.pags.filter(p=>p.ref===ym).reduce((s,p)=>s+(+p.valor||0),0));return `<tr><td>Parcerias pagas</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Parcerias pendentes</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>`})()}</table>
     <button class="bt" onclick="gerarDespesas('${ym}')">Lançar faturas em Despesas (a pagar)</button></div>`};
   $('#fM').onchange=r;r();
 }
+const r2=v=>Math.round((+v||0)*100)/100;
+const pagosDe=(arrId,ym)=>DB.pags.filter(p=>p.arrId===arrId&&p.ref===ym);
+function pagBloco(a,ym,ta){const ps=pagosDe(a.id,ym),pg=r2(ps.reduce((s,p)=>s+(+p.valor||0),0)),pend=r2(r2(ta)-pg);if(!(r2(ta)>0)&&!ps.length)return'';
+  const lin=(t,v,c)=>`<div style="display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #eee"><span>${t}</span><b style="color:${c}">${v}</b></div>`;
+  return `<div style="margin-top:6px">${pg?lin('Pago',R$(pg),'var(--ok)'):''}${lin(pend>0.004?'<b>Pendente</b>':'<b>Quitado</b>',R$(Math.max(pend,0)),pend>0.004?'var(--err)':'var(--ok)')}
+  ${ps.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #eee"><span class="mut" style="flex:1">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
+  ${pend>0.004?`<button class="bt verde" style="margin:10px 0 0;padding:10px" onclick="abrirPag('${a.id}','${ym}',${pend})">💵 Pagar</button>`:''}</div>`}
+function abrirPag(arrId,ym,pend){const a=arrDe(arrId);const contas=[...new Set(DB.pags.map(p=>p.conta).filter(Boolean))];
+  const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">Pagar ${esc(a.nome)} · ${ym.slice(5)}/${ym.slice(0,4)}</h3>
+  <p class="mut" style="margin:0 0 6px">Pendente: <b>${R$(pend)}</b></p>
+  <label>Data</label>${campoData('pgD',hoje())}
+  <label>Valor (R$)</label><input id="pgV" type="number" inputmode="decimal" value="${pend.toFixed(2)}">
+  <label>Conta de pagamento</label><input id="pgC" list="pgCL"><datalist id="pgCL">${contas.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+  <label>Observação</label><textarea id="pgO" rows="2"></textarea>
+  <div class="btRow"><button class="bt verm" id="pgN">Cancelar</button><button class="bt verde" id="pgS">Salvar</button></div></div>`;
+  document.body.appendChild(m);m.querySelector('#pgN').onclick=()=>m.remove();
+  m.querySelector('#pgS').onclick=()=>{const v=r2($('#pgV').value),dt=$('#pgD').value;if(!dt)return toast('Informe a data');if(!(v>0))return toast('Informe o valor');
+    if(v>pend+0.004)return toast('Valor maior que o pendente ('+R$(pend)+')');if(!$('#pgC').value.trim())return toast('Informe a conta de pagamento');
+    put('pags',{id:nid('P'),arrId,ref:ym,data:dt,valor:v,conta:$('#pgC').value.trim().toUpperCase(),obs:$('#pgO').value.trim(),criadoEm:new Date().toISOString()});
+    m.remove();toast(v<pend-0.004?'Pagamento parcial lançado':'Pago');go('faturas')}}
+function delPag(id){confirmar('Excluir este pagamento?',()=>{del('pags',id);go('faturas')})}
 function gerarDespesas(ym){
   const F=calcFatura(ym);const [Y,M]=ym.split('-');const ref=M+'/'+Y;let n=0;
   DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);fs.forEach(x=>{

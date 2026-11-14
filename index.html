@@ -93,7 +93,9 @@ tr.tot td{font-weight:800;background:var(--chip);border-bottom:0}
 #toast.on{opacity:1}
 .pk{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:flex-end}
 .pk .pkBox{background:#fff;width:100%;max-height:80vh;overflow:auto;border-radius:18px 18px 0 0;padding:8px 14px 24px}
-.pk .pkT{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 4px 2px}
+.pk .pkTop{position:sticky;top:-8px;z-index:2;background:#fff;display:flex;align-items:center;justify-content:space-between;margin:-8px -14px 4px;padding:10px 14px 8px;border-bottom:1px solid #eee}
+.pk .pkT{font-size:.85rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pk .pkX{width:40px;height:40px;border-radius:10px;border:2px solid var(--accent);background:#fff;color:var(--accent);font-size:1.2rem;font-weight:800;cursor:pointer}
 .pk .pkG{font-weight:800;color:var(--fg);font-size:1.05rem;padding:14px 4px 4px;border-top:1px solid #eee}.pk .pkG:first-child{border-top:0}
 .pk .pkI{padding:10px 12px;margin:4px 0;border-radius:10px;background:#f5f2ee;cursor:pointer}.pk .pkI.on{background:var(--accent);color:#fff}.pk .pkI.on .mut{color:#f3e6d8}
 .pk .pkI b{display:block}.pk .pkI .mut{font-size:.95rem}
@@ -158,7 +160,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='17';
+const APP_VERSAO='18';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -510,11 +512,11 @@ function aplicarPickers(){document.querySelectorAll('#app select').forEach(x=>{i
 new MutationObserver(aplicarPickers).observe(document.getElementById('app'),{childList:true,subtree:true});
 function selPicker(sel){if(sel.parentNode.classList.contains('selW'))return;const w=document.createElement('div');w.className='selW';sel.parentNode.insertBefore(w,sel);w.appendChild(sel);
   w.onclick=()=>{const m=document.createElement('div');m.className='pk';let h='';
-    const it=o=>o.dataset.p?`<div class="pkI${o.value===sel.value?' on':''}" data-v="${esc(o.value)}"><b>${esc(o.dataset.p)}</b><span class="mut">${esc(o.dataset.c)}</span></div>`:`<div class="pkI${o.value===sel.value?' on':''}" data-v="${esc(o.value)}"><b>${esc(o.textContent)}</b></div>`;
+    const it=o=>o.dataset.p?`<div class="pkI${o.value===sel.value?' on':''}" data-v="${esc(o.value)}"><b style="display:inline">${esc(o.dataset.p)}</b> <span class="mut">- ${esc(o.dataset.c)}</span></div>`:`<div class="pkI${o.value===sel.value?' on':''}" data-v="${esc(o.value)}"><b>${esc(o.textContent)}</b></div>`;
     [...sel.children].forEach(c=>{if(c.tagName==='OPTGROUP'){h+=`<div class="pkG">${esc(c.label)}</div>`+[...c.children].map(it).join('')}else h+=it(c)});
     const lb=w.previousElementSibling&&w.previousElementSibling.tagName==='LABEL'?w.previousElementSibling.textContent:'';
-    m.innerHTML=`<div class="pkBox">${lb?`<div class="pkT">${esc(lb)}</div>`:''}${h||'<p class="mut">Nenhuma opção.</p>'}</div>`;document.body.appendChild(m);
-    m.onclick=e=>{const i=e.target.closest('.pkI');if(i){sel.value=i.dataset.v;sel.dispatchEvent(new Event('change',{bubbles:true}))}if(i||e.target===m)m.remove()};
+    m.innerHTML=`<div class="pkBox"><div class="pkTop"><span class="pkT">${esc(lb||'Selecione')}</span><button class="pkX" type="button">✕</button></div>${h||'<p class="mut">Nenhuma opção.</p>'}</div>`;document.body.appendChild(m);
+    m.onclick=e=>{const i=e.target.closest('.pkI');if(i){sel.value=i.dataset.v;sel.dispatchEvent(new Event('change',{bubbles:true}))}if(i||e.target===m||e.target.closest('.pkX'))m.remove()};
     const on=m.querySelector('.on');if(on)on.scrollIntoView({block:'center'})}}
 function confirmar(txt,fn){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><p><b>${txt}</b></p><div class="row"><button class="bt sec" id="cN">Cancelar</button><button class="bt" id="cS">Confirmar</button></div></div>`;document.body.appendChild(m);m.querySelector('#cN').onclick=()=>m.remove();m.querySelector('#cS').onclick=()=>{m.remove();fn()};return false}
 function pedirSenha(){let p='';const m=document.createElement('div');m.className='modal';

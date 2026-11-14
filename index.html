@@ -99,7 +99,7 @@ tr.tot td{font-weight:800;background:var(--chip);border-bottom:0}
 .gDataBox span{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gDataBox i{font-style:normal;font-size:.75rem;background:var(--lima);color:var(--fg);border-radius:99px;padding:1px 7px;margin-left:6px}
 .gDataBox input{position:absolute;inset:0;opacity:0;width:100%;height:100%;border:0;padding:0;margin:0;min-height:0;cursor:pointer}
-.fBox{border-left:5px solid var(--lima)}
+.card.fBox{background:none;border:0;box-shadow:none;padding:2px 0 6px;margin-bottom:8px}
 .fBox h3{display:flex;justify-content:space-between;align-items:center}
 .fLin{display:grid;grid-template-columns:84px 46px minmax(0,1fr) 46px;gap:6px;align-items:stretch;margin-top:8px}
 .fLin .gDataBox{min-height:48px}
@@ -148,7 +148,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='9';
+const APP_VERSAO='10';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -254,7 +254,7 @@ const TELAS={menu,estoque,entrada:()=>formMov('ENTRADA'),saida:()=>formMov('SAID
 const TITULOS={menu:'Gestão de Arrendamentos',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',arrend:'Local e Lotes',lotes:'Local e Lotes'};
 let TELA='menu';
 const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'💲',faturas:'🧾',historico:'📋',gestao:'⚙️',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
-const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#8a6a4a',lotes:'#b0782a',gestao:'#11253d'};
+const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#ae8a63',lotes:'#b0782a',gestao:'#11253d'};
 function go(t){TELA=t;document.body.classList.toggle('naInicio',t==='menu');
   if(t==='menu'){menu()}else{
     $('#app').innerHTML=`<div class="tela"><button class="barra" onclick="go('menu')"><span>☰ ${ICONES[t]} ${TITULOS[t]}</span><span>◀ voltar</span></button><div id="cx"></div></div>`;
@@ -264,7 +264,7 @@ function tile(t,txt,full){return `<button class="${full?'full':''}" style="--c:$
 function menu(){
   const lotes=DB.lotes.filter(l=>l.ativo);const tot=lotes.reduce((s,l)=>s+saldo(l.id),0);
   $('#app').innerHTML=`
-  <div class="kpis"><div class="kpi"><b>${N(tot)}</b><span>cabeças</span></div><div class="kpi"><b>${DB.arr.filter(a=>a.ativo).length}</b><span>locais</span></div><div class="kpi"><b>${lotes.length}</b><span>lotes</span></div></div>
+  <div class="kpis"><div class="kpi"><b>${DB.arr.filter(a=>a.ativo).length}</b><span>locais</span></div><div class="kpi"><b>${lotes.length}</b><span>lotes</span></div><div class="kpi"><b>${N(tot)}</b><span>cabeças</span></div></div>
   <div class="tiles">
     ${tile('arrend','Local e Lotes',1)}
     ${tile('entrada','Entrada')}${tile('saida','Saídas/Transf')}
@@ -309,7 +309,7 @@ function formMov(tipo,ed){
     <label>${ehT||tipo==='SAIDA'?'<span id="fLoteLbl">'+(ehT?'Lote de origem':'Lote')+'</span>':(tipo==='ENTRADA'?'Lote destino':'Lote')}</label><select id="fLote">${optLotes()}</select>
     ${tipo==='SAIDA'?`<div id="fTrBox" hidden><label>Destino</label><select id="fTrDest"><option value="">— escolher —</option><optgroup label="Fazendas próprias">${FAZ_PROPRIAS.map(f=>`<option value="FAZ:${f}">${f}</option>`).join('')}</optgroup><optgroup label="Locais de arrendamento">${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</optgroup></select>
       <div id="fTrLoteBox" hidden><label>Lote de destino</label><select id="fTrLote"></select>
-        <div id="fTrNovo" hidden><label>Nome do novo lote</label><input id="fTrNN" placeholder="Ex.: FIRMINO - MACHOS 2">
+        <div id="fTrNovo" hidden>
         <div class="row"><div><label>Proprietário</label><select id="fTrNP">${DB.props.map(p=>`<option>${p}</option>`).join('')}</select></div><div><label>Valor (cab/mês)</label><input id="fTrNV" type="number" inputmode="decimal"></div></div></div></div></div>`:''}
     ${ehT?`<label>Lote de destino</label><select id="fDest">${optLotes()}</select>`:''}
 
@@ -334,7 +334,7 @@ function formMov(tipo,ed){
       const d=$('#fTrDest').value,ehArr=ehTr&&d&&!d.startsWith('FAZ:');$('#fTrLoteBox').hidden=!ehArr;
       if(ehArr){const cur=$('#fTrLote').value;$('#fTrLote').innerHTML='<option value="__novo">+ Novo lote</option>'+DB.lotes.filter(l=>l.arrId===d&&l.ativo&&l.id!==$('#fLote').value).map(l=>`<option value="${l.id}">${rotLote(l,1)}</option>`).join('');
         if([...$('#fTrLote').options].some(o=>o.value===cur))$('#fTrLote').value=cur;
-        const lo=loteDe($('#fLote').value);if(lo.prop&&!$('#fTrNN').value)$('#fTrNP').value=lo.prop}
+        const lo=loteDe($('#fLote').value);if(lo.prop)$('#fTrNP').value=lo.prop}
       $('#fTrNovo').hidden=!(ehArr&&$('#fTrLote').value==='__novo')};
     $('#fSub').onchange=trUpd;$('#fTrDest').onchange=trUpd;$('#fTrLote').onchange=trUpd;$('#fLote').addEventListener('change',trUpd);trUpd()}
   const div=()=>30;let ultDin='arroba';
@@ -368,7 +368,7 @@ function salvarMov(tipo){
   if(tipo==='SAIDA'&&m.subtipo==='TRANSFERÊNCIA'){const d=$('#fTrDest').value;if(!d)return toast('Escolha o destino da transferência');
     if(d.startsWith('FAZ:'))m.destino=d.slice(4);
     else{const lv=$('#fTrLote').value;m.destino=arrDe(d).nome;m.tipo='TRANSF';
-      if(lv==='__novo'){const nn=$('#fTrNN').value.trim().toUpperCase();if(!nn)return toast('Informe o nome do novo lote');
+      if(lv==='__novo'){const cat0=catLote(loteDe(m.loteId));const nn=(arrDe(d).nome+' - '+(cat0||'LOTE')).toUpperCase();
         novoLote={id:nid('L'),arrId:d,nome:nn,prop:$('#fTrNP').value,categoria:catLote(loteDe(m.loteId)),valorCab:+$('#fTrNV').value||0,salario:0,ativo:true};m.loteDest=novoLote.id}
       else m.loteDest=lv;
       if(m.loteDest===m.loteId)return toast('Origem e destino iguais')}}
@@ -393,7 +393,7 @@ function excluirMov(id){if(!confirmar('Excluir este lançamento?',()=>{del('movs
 
 /* ===================== MOVIMENTAÇÕES (histórico) ===================== */
 function historico(){
-  $('#cx').innerHTML=`<div class="card fBox"><h3>Filtrar</h3>${filtroSel('hA','Local',[['','Todos'],...DB.arr.map(a=>[a.id,a.nome])],'')}
+  $('#cx').innerHTML=`<div class="card fBox">${filtroSel('hA','Local',[['','Todos'],...DB.arr.map(a=>[a.id,a.nome])],'')}
   ${filtroSel('hT','Tipo',[['','Todos'],['ENTRADA','Entradas'],['SAIDA','Saídas'],['MORTE','Mortes'],['TRANSF','Transferências']],'')}</div>
   <div class="card" id="hL"></div>`;
   const r=()=>{const a=$('#hA').value,t=$('#hT').value;
@@ -421,7 +421,7 @@ function calcFatura(ym){
 }
 function faturas(){
   const d=new Date();const ym0=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  $('#cx').innerHTML=`<div class="card fBox"><h3>Filtrar</h3>${filtroMes('fM','Mês',ym0)}</div><div id="fR"></div>
+  $('#cx').innerHTML=`<div class="card fBox">${filtroMes('fM','Mês',ym0)}</div><div id="fR"></div>
   <div class="hint"><b>Como calcula:</b> valor por cabeça ÷ 30 × dias. Mês fechado = 30 dias. Entrou dia 10 → 20 dias (mês de 30) ou 21 (mês de 31). Saída, morte e transferência cobram até o dia em que saiu.</div>`;
   const r=()=>{const ym=$('#fM').value;if(!ym)return;const F=calcFatura(ym);let html='',tg=0,ts=0;
     DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length)return;let ta=0,sa=0;
@@ -454,7 +454,7 @@ function despesas(){
   <label>Descrição</label><input id="dDs" placeholder="Ex.: aluguel do mês de novembro">
   <div class="row"><div><label>Valor (R$)</label><input type="number" inputmode="decimal" id="dV"></div><div><label>Situação</label><select id="dS"><option>PAGO</option><option>A PAGAR</option></select></div></div>
   <input type="hidden" id="dId"><button class="bt" id="dBt" onclick="salvarDesp()">Registrar despesa</button><button class="bt sec" id="dCanc" hidden onclick="despesas()">Cancelar edição</button></div>
-  <div class="card fBox"><h3>Filtrar</h3>${filtroMes('dfM','Mês',hoje().slice(0,7))}
+  <div class="card fBox">${filtroMes('dfM','Mês',hoje().slice(0,7))}
   ${filtroSel('dfS','Situação',[['','Todas'],['A PAGAR','A pagar'],['PAGO','Pago']],'')}</div><div class="card"><div id="dLst"></div></div>`;
   const lotes=()=>{$('#dL').innerHTML='<option value="">— Arrendamento todo —</option>'+DB.lotes.filter(l=>l.arrId===$('#dA').value).map(l=>`<option value="${l.id}">${rotLote(l)}</option>`).join('')};
   $('#dA').onchange=lotes;lotes();$('#dfM').onchange=listaDesp;$('#dfS').onchange=listaDesp;listaDesp();
@@ -491,22 +491,22 @@ function telaLocais(){setTimeout(syncSels);
    <button class="bt sec" id="aInat" hidden style="border-color:var(--err);color:var(--err)" onclick="inatArr()"></button></div>
   <div class="card" id="lForm" hidden><h3 id="lTit">Novo lote</h3><input type="hidden" id="lId">
    <label>Local</label><select id="lA">${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
-   <label>Nome do lote</label><input id="lN" placeholder="Ex.: FIRMINO - MACHOS">
+   <label>Categoria</label><select id="lCat"><option value="">— escolher —</option>${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
    <label>Proprietário</label><select id="lP">${DB.props.map(p=>`<option>${p}</option>`).join('')}</select>
    <div class="row"><div><label>Valor (cab/mês)</label><input id="lV" type="number" inputmode="decimal"></div>
    <div><label>Salário (opcional)</label><input id="lS" type="number" inputmode="decimal"></div></div>
-   <label>Categoria</label><select id="lCat"><option value="">— escolher —</option>${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+   <label>Observação</label><textarea id="lObs" rows="2"></textarea>
    <input type="hidden" id="lAt" value="1">
    <button class="bt" onclick="salvarLote()">Salvar lote</button><button class="bt sec" onclick="telaLocais()">Cancelar</button>
    <button class="bt sec" id="lInat" hidden style="border-color:var(--err);color:var(--err)" onclick="inatLote()"></button></div>
-  <div class="card fBox" id="llFil" ${FL.inat?'hidden':''}><h3>Filtrar</h3>${filtroSel('flLoc','Local',[['','Todos'],...DB.arr.filter(a=>a.ativo).map(a=>[a.id,a.nome])],FL.loc)}
+  <div class="card fBox" id="llFil" ${FL.inat?'hidden':''}>${filtroSel('flLoc','Local',[['','Todos'],...DB.arr.filter(a=>a.ativo).map(a=>[a.id,a.nome])],FL.loc)}
    ${filtroSel('flProp','Proprietário',[['','Todos'],...DB.props.map(p=>[p,p])],FL.prop)}
    <div id="llRes" class="mut" style="margin-top:10px"></div></div>
   <div id="llLst"></div>`;
   $('#flLoc').onchange=e=>{FL.loc=e.target.value;telaLocais();syncSels()};$('#flProp').onchange=e=>{FL.prop=e.target.value;telaLocais();syncSels()};
   const vis=DB.arr.filter(a=>!FL.loc||a.id===FL.loc||FL.inat),porP={};let totG=0;
   DB.lotes.filter(l=>l.ativo&&(!FL.loc||l.arrId===FL.loc)&&(!FL.prop||l.prop===FL.prop)).forEach(l=>{const c=saldo(l.id);porP[l.prop]=(porP[l.prop]||0)+c;totG+=c});
-  $('#llRes').innerHTML=`<b style="color:var(--fg);font-size:1.05rem">${N(totG)} cabeças</b>`+(Object.keys(porP).length>1?' · '+Object.entries(porP).map(([p,c])=>`${p} ${N(c)}`).join(' · '):'');
+  $('#llRes').innerHTML=`<b style="color:var(--fg);font-size:1.05rem">${N(totG)} cabeças</b>`;
   $('#llLst').innerHTML=vis.map(a=>{const ls=DB.lotes.filter(l=>l.arrId===a.id&&(!FL.prop||l.prop===FL.prop)&&(FL.inat?(!a.ativo||!l.ativo):l.ativo));
     if(FL.inat?(a.ativo&&!ls.length):!a.ativo)return'';if(!FL.inat&&FL.prop&&!ls.length)return'';const cab=ls.filter(l=>l.ativo).reduce((s,l)=>s+saldo(l.id),0);
     return `<div class="card">
@@ -531,14 +531,14 @@ function segSel(b){[...b.parentNode.children].forEach(x=>x.classList.toggle('on'
 function abrirLote(){$('#lForm').hidden=false;$('#aForm').hidden=true;$('#llBts').hidden=true;$('#lTit').textContent='Novo lote';scrollTo(0,0)}
 function editLote(id){abrirLote();const l=loteDe(id);$('#lId').value=id;
   if(![...$('#lA').options].some(o=>o.value===l.arrId))$('#lA').insertAdjacentHTML('beforeend',`<option value="${l.arrId}">${arrDe(l.arrId).nome}</option>`);
-  $('#lA').value=l.arrId;$('#lN').value=l.nome;$('#lP').value=l.prop;$('#lV').value=l.valorCab||'';$('#lS').value=l.salario||'';$('#lCat').value=catLote(l);$('#lAt').value=l.ativo?'1':'0';
+  $('#lA').value=l.arrId;$('#lObs').value=l.obs||'';$('#lP').value=l.prop;$('#lV').value=l.valorCab||'';$('#lS').value=l.salario||'';$('#lCat').value=catLote(l);$('#lAt').value=l.ativo?'1':'0';
   $('#lTit').textContent='Editar '+rotLote(l);const b=$('#lInat');b.hidden=false;b.textContent=l.ativo?'Inativar lote':'Reativar lote';b.style.cssText=l.ativo?'border-color:var(--err);color:var(--err)':'border-color:var(--ok);color:var(--ok)';scrollTo(0,0)}
 function inatLote(){const l=loteDe($('#lId').value);if(!l.id)return;
   if(l.ativo){const c=saldo(l.id);if(c>0)return toast('Lote ainda tem '+c+' cab — transfira ou dê saída antes');confirmar('Inativar o lote '+rotLote(l)+'?',()=>{l.ativo=false;put('lotes',l);toast('Lote inativado');telaLocais()})}
   else{const a=arrDe(l.arrId);if(a.id&&!a.ativo){a.ativo=true;put('arr',a)}l.ativo=true;put('lotes',l);toast('Lote reativado');FL.inat=false;telaLocais()}}
-function salvarLote(){const n=$('#lN').value.trim().toUpperCase(),id=$('#lId').value;if(!n)return toast('Informe o nome do lote');
-  if(!$('#lCat').value)return toast('Escolha a categoria do lote');
-  const d={arrId:$('#lA').value,nome:n,prop:$('#lP').value,valorCab:+$('#lV').value||0,salario:+$('#lS').value||0,categoria:$('#lCat').value,ativo:$('#lAt').value==='1'};
+function salvarLote(){const id=$('#lId').value;
+  if(!$('#lCat').value)return toast('Escolha a categoria do lote');const n=(arrDe($('#lA').value).nome+' - '+$('#lCat').value).toUpperCase();
+  const d={arrId:$('#lA').value,nome:n,prop:$('#lP').value,valorCab:+$('#lV').value||0,salario:+$('#lS').value||0,categoria:$('#lCat').value,obs:$('#lObs').value.trim(),ativo:$('#lAt').value==='1'};
   if(id){if(!d.ativo&&saldo(id)>0)return toast('Lote ainda tem '+saldo(id)+' cab — transfira ou dê saída antes');put('lotes',Object.assign(loteDe(id),d))}
   else put('lotes',Object.assign({id:nid('L')},d));
   toast('Salvo ✓');telaLocais()}

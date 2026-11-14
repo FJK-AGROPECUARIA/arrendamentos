@@ -1,6 +1,6 @@
 {
-  "name": "FJK - Arrendamentos",
-  "short_name": "FJK - Arrendamentos",
+  "name": "Parcerias",
+  "short_name": "Parcerias",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

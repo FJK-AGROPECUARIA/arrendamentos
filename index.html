@@ -58,6 +58,7 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
 .bt.sec{background:#fff;color:var(--accent)}.bt.sec:active{background:var(--accent);color:#fff}
 .fat{font-size:.86rem}.fat tr.tot td{font-size:.95rem}.fat th,.fat td{padding-left:3px;padding-right:3px}.fat th{font-size:.62rem;letter-spacing:.02em}
 .fat .icb[data-x]{display:inline-flex!important;vertical-align:middle}
+#fMedio{display:none!important}
 .pgB{margin-top:10px;border:1px solid #eee3d6;border-radius:12px;padding:8px 10px;font-size:.92rem}.pgT{font-weight:800;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
 .pgL{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1ebe3}.pgL:last-of-type{border-bottom:0}.pgI .mut{flex:1;font-size:.85rem}.pgI .icb{width:34px;height:34px;font-size:.85rem}
 .expRow .bt{font-size:.95rem;padding:9px 4px}
@@ -167,14 +168,14 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='26';
-function status(){const e=$('#st');if(!e)return;e.className='nuvem';
+const APP_VERSAO='27';
+function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
   if(!api()){e.textContent='Nuvem: não ligada';e.classList.add('off');return}
   if(FILA.length){e.textContent='Nuvem: '+FILA.length+' pendente(s)';e.classList.add('pend');return}
   if(online===false){e.textContent='Nuvem: sem sinal';e.classList.add('off');return}
-  e.textContent='Nuvem: ok'}
+  e.textContent='';e.hidden=true}
 function put(t,reg){
   if(t==='props'){if(!DB.props.includes(reg.nome))DB.props.push(reg.nome)}
   else{reg.criadoEm=reg.criadoEm||new Date().toISOString();const i=DB[t].findIndex(x=>x.id===reg.id);if(i>=0)DB[t][i]=reg;else DB[t].push(reg)}
@@ -687,26 +688,25 @@ const dataArq=d=>d.slice(8,10)+'-'+d.slice(5,7)+'-'+d.slice(0,4);
 function dadosLotes(){const ps=[];DB.arr.filter(a=>a.ativo&&(!FL.loc||a.id===FL.loc)).forEach(a=>{const ls=DB.lotes.filter(l=>l.arrId===a.id&&l.ativo&&(!FL.prop||l.prop===FL.prop));if(!ls.length)return;
   ps.push({a,ls:ls.map(l=>({cat:catLote(l)||sufLote(l)||'sem categoria',prop:l.prop,cab:saldo(l.id),vc:+l.valorCab||0,sal:+l.salario||0,obs:l.obs||''}))})});return ps}
 function tituloRel(){const f=[FL.loc?arrDe(FL.loc).nome:'',FL.prop?'Proprietário '+FL.prop:''].filter(Boolean).join(' · ');return {t:'FJK - Parceiros e Lotes - '+fmtD(hoje()),f}}
-function imgLotes(ps){const {t,f}=tituloRel();const M=30,cols=[['Categoria',300,'l'],['Proprietário',220,'c'],['Cabeças',150,'r'],['R$/cab/mês',190,'r'],['Salário',170,'r']];
-  const W=M*2+cols.reduce((a,c)=>a+c[1],0),RH=46,esc2=2;let H=120+(f?30:0);ps.forEach(p=>{H+=50+40+RH*p.ls.length+20});H+=80;
+function linhasRel(ps){const L=[];ps.slice().sort((x,y)=>x.a.nome.localeCompare(y.a.nome,'pt-BR')).forEach(p=>p.ls.forEach(l=>L.push([p.a.nome,p.a.cidade,l.prop,l.cat+(l.obs?' ('+l.obs+')':''),l.cab])));return L}
+function imgLotes(ps){const {t,f}=tituloRel();const L=linhasRel(ps),tg=L.reduce((s,r)=>s+r[4],0);const M=30,cols=[['Parceiro',230,'l'],['Cidade',200,'l'],['Proprietário',190,'l'],['Categoria',260,'l'],['Cab.',110,'r']];
+  const W=M*2+cols.reduce((a,c)=>a+c[1],0),RH=44,esc2=2;const H=120+(f?30:0)+44+RH*L.length+20+60;
   const cv=document.createElement('canvas');cv.width=W*esc2;cv.height=H*esc2;const c=cv.getContext('2d');c.scale(esc2,esc2);const F='-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
   c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#5a3618';c.fillRect(0,0,W,90);c.fillStyle='#a7bc09';c.fillRect(0,90,W,6);
   c.fillStyle='#fff';c.font=`700 32px ${F}`;c.textBaseline='middle';c.fillText(t,M,46);let y=120;
   if(f){c.fillStyle='#5d6b7a';c.font=`600 20px ${F}`;c.fillText('Filtro: '+f,M,y);y+=30}
-  const px=(k,al)=>{let x=M;for(let i=0;i<k;i++)x+=cols[i][1];const w=cols[k][1];return al==='l'?x+10:al==='c'?x+w/2:x+w-10};let tg=0;
-  ps.forEach(p=>{const cab=p.ls.reduce((s,l)=>s+l.cab,0);tg+=cab;c.fillStyle='#f1e8de';c.fillRect(M,y,W-2*M,44);c.fillStyle='#3d2410';c.font=`700 23px ${F}`;c.textAlign='left';
-    c.fillText(`${p.a.nome} - ${p.a.cidade} - ${N(cab)} cab`,M+12,y+22);y+=50;c.font=`700 15px ${F}`;c.fillStyle='#5d6b7a';
-    cols.forEach(([tt,w,al],k)=>{c.textAlign=al==='l'?'left':al==='c'?'center':'right';c.fillText(tt.toUpperCase(),px(k,al),y+20)});y+=40;c.fillStyle='#e4dccf';c.fillRect(M,y-2,W-2*M,2);
-    p.ls.forEach((l,i)=>{if(i%2){c.fillStyle='#faf7f3';c.fillRect(M,y,W-2*M,RH)}c.fillStyle='#11253d';c.font=`500 21px ${F}`;
-      [l.cat+(l.obs?' ('+l.obs+')':''),l.prop,N(l.cab),l.vc?R$(l.vc):'—',l.sal?R$(l.sal):'—'].forEach((v,k)=>{const [,w,al]=cols[k];c.textAlign=al==='l'?'left':al==='c'?'center':'right';let fs=21;c.font=`${k===2?700:500} ${fs}px ${F}`;while(c.measureText(v).width>w-16&&fs>12){fs--;c.font=`${k===2?700:500} ${fs}px ${F}`}c.fillText(v,px(k,al),y+RH/2)});
-      y+=RH;c.fillStyle='#e4dccf';c.fillRect(M,y-1,W-2*M,1)});y+=20});
-  c.fillStyle='#5a3618';c.fillRect(M,y,W-2*M,56);c.fillStyle='#a7bc09';c.fillRect(M,y,W-2*M,4);c.fillStyle='#fff';c.font=`800 24px ${F}`;c.textAlign='left';c.fillText('TOTAL GERAL',M+12,y+31);c.textAlign='right';c.fillText(N(tg)+' cab',px(2,'r'),y+31);
+  const px=(k,al)=>{let x=M;for(let i=0;i<k;i++)x+=cols[i][1];const w=cols[k][1];return al==='l'?x+10:al==='c'?x+w/2:x+w-10};
+  c.fillStyle='#f1e8de';c.fillRect(M,y,W-2*M,40);c.font=`700 16px ${F}`;c.fillStyle='#3d2410';
+  cols.forEach(([tt,w,al],k)=>{c.textAlign=al==='l'?'left':'right';c.fillText(tt.toUpperCase(),px(k,al),y+20)});y+=44;
+  L.forEach((r,i)=>{if(i%2){c.fillStyle='#faf7f3';c.fillRect(M,y,W-2*M,RH)}c.fillStyle='#11253d';
+    r.forEach((v,k)=>{const [,w,al]=cols[k];const tx=k===4?N(v):String(v);c.textAlign=al==='l'?'left':'right';let fs=20;const wt=k===0||k===4?700:500;c.font=`${wt} ${fs}px ${F}`;while(c.measureText(tx).width>w-16&&fs>11){fs--;c.font=`${wt} ${fs}px ${F}`}c.fillText(tx,px(k,al),y+RH/2)});
+    y+=RH;c.fillStyle='#e4dccf';c.fillRect(M,y-1,W-2*M,1)});y+=20;
+  c.fillStyle='#5a3618';c.fillRect(M,y,W-2*M,56);c.fillStyle='#a7bc09';c.fillRect(M,y,W-2*M,4);c.fillStyle='#fff';c.font=`800 24px ${F}`;c.textAlign='left';c.fillText('TOTAL',M+12,y+31);c.textAlign='right';c.fillText(N(tg)+' cab',px(4,'r'),y+31);
   return cv}
-function xlsLotes(ps){const H=t=>({v:t,s:1});const rows=[[H('Parceiro'),H('Cidade'),H('Categoria'),H('Proprietário'),H('Cabeças'),H('Valor cab/mês'),H('Salário'),H('Observação')]];
-  ps.forEach(p=>p.ls.forEach(l=>rows.push([{v:p.a.nome},{v:p.a.cidade},{v:l.cat},{v:l.prop},{v:l.cab,s:4},{v:l.vc,s:12},{v:l.sal,s:12},{v:l.obs}])));
-  const L=rows.length,tg=ps.reduce((s,p)=>s+p.ls.reduce((a,l)=>a+l.cab,0),0);
-  rows.push([{v:'TOTAL',s:9},{v:'',s:9},{v:'',s:9},{v:'',s:9},{f:`SUM(E2:E${L})`,v:tg,s:7},{v:'',s:9},{v:'',s:9},{v:'',s:9}]);
-  return montarXlsx([['Parceiros e Lotes',rows,[18,16,18,14,10,14,13,24]]])}
+function xlsLotes(ps){const H=t=>({v:t,s:1});const rows=[[H('Parceiro'),H('Cidade'),H('Proprietário'),H('Categoria'),H('Cabeças')]];
+  const L=linhasRel(ps);L.forEach(r=>rows.push([{v:r[0]},{v:r[1]},{v:r[2]},{v:r[3]},{v:r[4],s:4}]));
+  const n=rows.length,tg=L.reduce((s,r)=>s+r[4],0);rows.push([{v:'TOTAL',s:9},{v:'',s:9},{v:'',s:9},{v:'',s:9},{f:`SUM(E2:E${n})`,v:tg,s:7}]);
+  return montarXlsx([['Parceiros e Lotes',rows,[20,18,16,22,10]]])}
 async function relLotes(tp){const ps=dadosLotes();if(!ps.length)return toast('Nada para gerar com esse filtro');const {f}=tituloRel();const nome='FJK - Parceiros e Lotes - '+dataArq(hoje())+(f?' - '+f:'');
   try{if(tp==='xls')return await salvarOuEnviar([xlsLotes(ps)],[nome+'.xlsx'],XT);const cv=imgLotes(ps);
     if(tp==='pdf')return await salvarOuEnviar([fzPdf([cv])],[nome+'.pdf'],'application/pdf');

@@ -59,7 +59,9 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
 .fat{font-size:.86rem}.fat tr.tot td{font-size:.95rem}.fat th,.fat td{padding-left:3px;padding-right:3px}.fat th{font-size:.62rem;letter-spacing:.02em}
 .fat .icb[data-x]{display:inline-flex!important;vertical-align:middle}
 #fMedio{display:none!important}
-.pgB{margin-top:10px;border:1px solid #eee3d6;border-radius:12px;padding:8px 10px;font-size:.92rem}.pgT{font-weight:800;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.pgH{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:700;font-size:.82rem;padding:2px 0 6px;white-space:nowrap}
+.pgBt{display:flex;gap:8px;margin-top:8px}.pgBt .bt{margin:0;flex:1;padding:7px 4px;font-size:.92rem;white-space:nowrap}.pgBt .bt.verde{color:#fff}
+.pgB{margin-top:10px;border:1px solid #eee3d6;border-radius:12px;padding:8px 8px;font-size:.92rem}.pgT{font-weight:800;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
 .pgL{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1ebe3}.pgL:last-of-type{border-bottom:0}.pgI .mut{flex:1;font-size:.85rem}.pgI .icb{width:34px;height:34px;font-size:.85rem}
 .expRow .bt{font-size:.95rem;padding:9px 4px}
 .arqCaixa{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -169,7 +171,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='28';
+const APP_VERSAO='29';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -278,7 +280,7 @@ const TITULOS={menu:'Parcerias',estoque:'Estoque de animais',entrada:'Entrada de
 let TELA='menu',VOLTA=null;
 function cancelarForm(){if(VOLTA)return voltar();go(TELA);scrollTo(0,0)}
 function voltar(){const md=document.querySelector('.modal,.pk');if(md){md.remove();return}if(VOLTA){const f=VOLTA;VOLTA=null;f();scrollTo(0,0);return}go('menu')}
-const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'💲',faturas:'🧾',historico:'📋',gestao:'⚙️',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
+const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'<span style="color:#fff;font-weight:900;font-family:Arial,sans-serif;line-height:1">$</span>',faturas:'🧾',historico:'<span style="display:inline-flex;align-items:center;gap:2px;line-height:1">🐂<span style="color:#fff;font-weight:900;font-family:Arial,sans-serif">⇄</span></span>',gestao:'⚙️',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
 const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#ae8a63',lotes:'#b0782a',gestao:'#11253d'};
 function go(t){TELA=t;VOLTA=null;document.body.classList.toggle('naInicio',t==='menu');
   if(t==='menu'){menu()}else{
@@ -456,24 +458,24 @@ function faturas(){syncProvisoes();
       const rows=fs.map(x=>{ta+=x.valor;sa+=x.salario;return `<tr><td>${catLote(x.l)||x.l.nome}<br><span class="mut">${x.l.prop} · ${R$(x.l.valorCab)}/cab</span></td><td class="n">${x.cabIni}</td><td class="n">${x.ent?'+'+x.ent:''}${x.sai?' −'+x.sai:''}</td><td class="n">${N(x.cd/30)}</td><td class="n"><b>${R$(x.valor)}</b></td></tr>`}).join('');
       const taC=ta,saC=sa,ajP=ajDe(a.id,ym,'P'),ajS=ajDe(a.id,ym,'S');if(ajP)ta=+ajP.valor;if(ajS)sa=+ajS.valor;
       tg+=ta;ts+=sa;
-      html+=`<div class="card"><div class="arr-h"><h3>${a.nome}</h3><span class="mut">${a.cidade}</span></div><div class="scroll"><table class="fat">
+      html+=`<div class="card"><div class="arr-h"><h3 style="letter-spacing:.02em">${a.nome} - ${a.cidade}</h3></div><div class="scroll"><table class="fat">
       <tr><th>Lote</th><th class="n">Início</th><th class="n">Mov.</th><th class="n">Cab.</th><th class="n">Valor</th></tr>${rows}
-      <tr class="tot"><td colspan="4" style="white-space:nowrap">Aluguel do mês<button class="icb" style="width:30px;height:30px;font-size:.8rem;vertical-align:middle;margin-left:8px;width:32px;height:32px" title="Ajustar" data-x="1" onclick="ajustarValor('${a.id}','${ym}','P',${r2(taC)})">✏️</button>${ajP?'<br><span class="mut" style="font-weight:400;font-size:.75rem">(ajustado)</span>':''}</td><td class="n" style="white-space:nowrap">${R$(ta)}</td></tr>
 
-      ${sa?`<tr class="tot"><td colspan="4" style="white-space:nowrap">Salário do mês<button class="icb" style="width:30px;height:30px;font-size:.8rem;vertical-align:middle;margin-left:8px;width:32px;height:32px" title="Ajustar" data-x="1" onclick="ajustarValor('${a.id}','${ym}','S',${r2(saC)})">✏️</button>${ajS?'<br><span class="mut" style="font-weight:400;font-size:.75rem">(ajustado)</span>':''}</td><td class="n" style="white-space:nowrap">${R$(sa)}</td></tr>`:''}</table></div>${pagBloco(a,ym,ta,sa)}</div>`});
+
+      </table></div>${pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS)}</div>`});
     $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Aluguéis</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pp=DB.pags.filter(p=>p.ref===ym&&(!fa||p.arrId===fa)),pg=somaP(pp.filter(p=>!ehSal(p))),sg=somaP(pp.filter(ehSal));return `<tr><td>Aluguéis pagos</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Aluguéis à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>${ts?`<tr><td>Salários pagos</td><td class="n" style="color:var(--ok)">${R$(sg)}</td></tr><tr><td><b>Salários à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(ts)-sg,0))}</b></td></tr>`:''}`})()}</table></div>`};
   $('#fM').onchange=r;$('#fA').onchange=r;r();
 }
 const r2=v=>Math.round((+v||0)*100)/100;
 const ehSal=p=>String(p.id).startsWith('PS_');const somaP=ps=>r2(ps.reduce((s,p)=>s+(+p.valor||0),0));
 const pagosDe=(arrId,ym,tp)=>DB.pags.filter(p=>p.arrId===arrId&&p.ref===ym&&(!tp||(tp==='S')===ehSal(p)));
-function pagBloco(a,ym,ta,sa){if(!(r2(ta)>0)&&!(r2(sa)>0)&&!pagosDe(a.id,ym).length)return'';
-  const lin=(t,v,c,b)=>`<div class="pgL"><span${b?' style="font-weight:700"':''}>${t}</span><b style="color:${c}">${v}</b></div>`;
-  const bloco=(nome,tot,tp)=>{const ps=pagosDe(a.id,ym,tp),pg=somaP(ps),pend=r2(r2(tot)-pg);
-    return `<div class="pgB"><div class="pgT">${nome}</div>${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
-    ${pg?lin('PAGO',R$(pg),'var(--ok)',1):''}${pend>0.004?lin('À PAGAR',R$(pend),'var(--err)',1):''}
-    ${pend>0.004?`<button class="bt verde" style="margin:8px 0 0;padding:10px;font-size:1rem" onclick="abrirPag('${a.id}','${ym}',${pend},'${tp}')">💵 Pagar ${tp==='S'?'salário':'aluguel'}</button>`:''}</div>`};
-  return (r2(ta)>0||pagosDe(a.id,ym,'P').length?bloco('Aluguel do mês',ta,'P'):'')+(r2(sa)>0||pagosDe(a.id,ym,'S').length?bloco('Salário do mês',sa,'S'):'')}
+function pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS){
+  const bloco=(nome,tot,tp,calc,aj)=>{const ps=pagosDe(a.id,ym,tp),pg=somaP(ps),pend=r2(r2(tot)-pg);
+    return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${pend>0.004?'À PAGAR':'PAGO'}</b></span><b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${R$(pend>0.004?pend:pg)}</b></div>
+    ${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
+    ${pg&&pend>0.004?`<div class="pgL"><span class="mut">Pago</span><b style="color:var(--ok)">${R$(pg)}</b></div>`:''}
+    <div class="pgBt"><button class="bt sec" onclick="ajustarValor('${a.id}','${ym}','${tp}',${r2(calc)})">✏️ Editar${aj?' <small style="font-size:.72rem">(ajustado)</small>':''}</button>${pend>0.004?`<button class="bt verde" onclick="abrirPag('${a.id}','${ym}',${pend},'${tp}')">💵 Pagar</button>`:''}</div></div>`};
+  return (r2(ta)>0||pagosDe(a.id,ym,'P').length?bloco('Aluguel do mês',ta,'P',taC,ajP):'')+(r2(sa)>0||pagosDe(a.id,ym,'S').length?bloco('Salário do mês',sa,'S',saC,ajS):'')}
 function abrirPag(arrId,ym,pend,tp,ed){const sal=tp==='S';const a=arrDe(arrId);const contas=[...new Set(DB.pags.map(p=>p.conta).filter(Boolean))];
   const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">${ed?'Editar pagamento':'Pagar'} ${sal?'salário':'aluguel'} · ${esc(a.nome)} · ${ym.slice(5)}/${ym.slice(0,4)}</h3>
   <p class="mut" style="margin:0 0 6px">${ed?'Máximo':'À pagar'}: <b>${R$(pend)}</b></p>

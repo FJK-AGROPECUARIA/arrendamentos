@@ -99,7 +99,7 @@ tr.tot td{font-weight:800;background:var(--chip);border-bottom:0}
 .filtroLbl{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 5px}
 .acoes{display:flex;gap:6px;align-items:flex-start;flex:none}
 .icb{width:40px;height:40px;padding:0;border-radius:10px;border:2px solid var(--line);background:#fff;font-size:1.05rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.icb.del{color:var(--err);font-weight:800}
+.icb.del{color:var(--err);font-weight:900;font-size:1.4rem}.pgI .icb.del{font-size:1.25rem}
 .seta{font-size:1.8rem;color:var(--muted);align-self:center;padding:0 4px}
 .scroll{overflow-x:auto}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:#fff;padding:14px 22px;border-radius:16px;font-weight:700;font-size:1.05rem;max-width:86vw;text-align:center;z-index:9999;box-shadow:0 8px 28px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .25s}
@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='34';
+const APP_VERSAO='35';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -485,9 +485,9 @@ const INI_PAG='2026-12';const quitado=ym=>ym<INI_PAG;
 function pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS){
   const bloco=(nome,tot,tp,calc,aj)=>{if(quitado(ym))return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:var(--ok)">QUITADO</b></span><b style="color:var(--ok)">${R$(tot)}</b></div></div>`;const ps=pagosDe(a.id,ym,tp),pg=somaP(ps),pend=r2(r2(tot)-pg);
     return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${pend>0.004?'À PAGAR':'PAGO'}</b></span><b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${R$(pend>0.004?pend:pg)}</b></div>
-    ${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
+    ${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb del" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
     ${pg&&pend>0.004?`<div class="pgL"><span class="mut">Pago</span><b style="color:var(--ok)">${R$(pg)}</b></div>`:''}
-    <div class="pgBt"><button class="bt sec" onclick="ajustarValor('${a.id}','${ym}','${tp}',${r2(calc)})">✏️ Editar${aj?' <small style="font-size:.72rem">(ajustado)</small>':''}</button>${pend>0.004?`<button class="bt verde" onclick="abrirPag('${a.id}','${ym}',${pend},'${tp}')">💵 Pagar</button>`:''}</div></div>`};
+    ${pend>0.004?`<div class="pgBt"><button class="bt sec" onclick="ajustarValor('${a.id}','${ym}','${tp}',${r2(calc)})">✏️ Editar${aj?' <small style="font-size:.72rem">(ajustado)</small>':''}</button>${pend>0.004?`<button class="bt verde" onclick="abrirPag('${a.id}','${ym}',${pend},'${tp}')">💵 Pagar</button>`:''}</div>`:''}</div>`};
   return (r2(ta)>0||pagosDe(a.id,ym,'P').length?bloco('Aluguel do mês',ta,'P',taC,ajP):'')+(r2(sa)>0||pagosDe(a.id,ym,'S').length?bloco('Salário do mês',sa,'S',saC,ajS):'')}
 function abrirPag(arrId,ym,pend,tp,ed){const sal=tp==='S';const a=arrDe(arrId);const contas=[...new Set(DB.pags.map(p=>p.conta).filter(Boolean))];
   const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">${ed?'Editar pagamento':'Pagar'} ${sal?'salário':'aluguel'} · ${esc(a.nome)} · ${ym.slice(5)}/${ym.slice(0,4)}</h3>
@@ -600,7 +600,7 @@ function rateio(d){const v=r2(d.valor);if(d.loteId&&loteDe(d.loteId)&&loteDe(d.l
   if(!Object.keys(pesos).length)DB.lotes.filter(l=>l.arrId===d.arrId).forEach(l=>add(l.prop,saldo(l.id,d.data)));
   const ks=Object.keys(pesos);if(!ks.length)return {[PAG0]:v};const tot=ks.reduce((s,k)=>s+pesos[k],0);let rest=v;const o={};
   ks.forEach((k,i)=>{const x=i===ks.length-1?r2(rest):r2(v*pesos[k]/tot);o[k]=x;rest-=x});return o}
-const CXT={APORTE:['Colocou saldo','+'],ACERTO:['Acerto (pagou à FJK)','+'],DEVOLUCAO:['FJK devolveu','−']};
+const CXT={APORTE:['Adicionar saldo','+'],ACERTO:['Acerto (pagou à FJK)','+'],DEVOLUCAO:['FJK devolveu','−']};const CXT_OPC=['APORTE','ACERTO'];
 function extrato(p){const it=[];
   DB.desp.filter(d=>d.status==='PAGO'&&(d.ref&&/^\d\d\/\d{4}$/.test(d.ref)?d.ref.slice(3)+'-'+d.ref.slice(0,2)>=INI_PAG:(d.pagoEm||d.data)>=INI_CX)).forEach(d=>{const rt=rateio(d),meu=rt[p]||0,pag=d.pagador||PAG0,dt=d.pagoEm||d.data;
     const txt=(d.tipo==='ARRENDAMENTO'?'Aluguel':d.tipo==='SALÁRIO'?'Salário':d.tipo)+' · '+(arrDe(d.arrId).nome||'')+(d.ref?' · '+d.ref:'')+(d.desc&&!/^Pagamento/.test(d.desc)?' · '+d.desc:'');
@@ -612,19 +612,19 @@ const saldoCx=p=>{const e=extrato(p);return e.length?e[e.length-1].saldo:0};
 const rotSaldo=v=>v>0.004?`<b style="color:var(--ok)">Saldo ${R$(v)}</b>`:v<-0.004?`<b style="color:var(--err)">Deve ${R$(-v)}</b>`:'<b class="mut">Acertado</b>';
 let CXF='';
 function caixa(){const ps=DB.props.filter(p=>p!==PAG0);if(!CXF||!ps.includes(CXF))CXF=ps[0]||'';
-  $('#cx').innerHTML=`<div class="row" style="margin-top:12px;grid-template-columns:1fr"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx()">+ Lançamento no caixa</button></div>
+  $('#cx').innerHTML=`<div class="row" style="margin-top:12px"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','APORTE')">+ Saldo</button><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','ACERTO')">Acerto</button></div>
   <div class="card" id="cxForm" hidden></div>
-  <div class="card"><h3>Saldo de cada proprietário com a FJK</h3>${ps.map(p=>`<div class="list-it" style="cursor:pointer" onclick="CXF='${p}';caixa()"><b>${p}</b><span>${rotSaldo(saldoCx(p))}</span></div>`).join('')||'<p class="mut">Nenhum proprietário além da FJK.</p>'}</div>
+  <div class="card"><h3>Extrato com a FJK</h3>${ps.map(p=>`<div class="list-it" style="cursor:pointer" onclick="CXF='${p}';caixa()"><b>${p}</b><span>${rotSaldo(saldoCx(p))}</span></div>`).join('')||'<p class="mut">Nenhum proprietário além da FJK.</p>'}</div>
   ${CXF?`<div class="card fBox">${filtroSel('cxP','Proprietário',ps.map(p=>[p,p]),CXF)}</div><div class="card" id="cxExt"></div>`:''}
   <div class="hint">Despesas pagas pela FJK que são de outro proprietário entram como débito dele. Acertos e saldo colocado entram como crédito. Conta a partir de ${INI_PAG.slice(5)}/${INI_PAG.slice(0,4)}.</div>`;
   if(CXF){$('#cxP').onchange=()=>{CXF=$('#cxP').value;caixa()};const e=extrato(CXF).reverse();
-    $('#cxExt').innerHTML=`<h3>Extrato · ${CXF}</h3><div style="margin:-4px 0 8px">${rotSaldo(saldoCx(CXF))}</div>`+(e.map(x=>`<div class="list-it"><div><b style="color:${x.v<0?'var(--err)':'var(--ok)'}">${x.v<0?'−':'+'} ${R$(Math.abs(x.v))}</b> · ${fmtD(x.data)}<br><span class="mut">${esc(x.txt)}</span><br><span class="mut" style="font-size:.78rem">saldo depois: ${R$(x.saldo)}</span></div>
+    $('#cxExt').innerHTML=`<h3>Extrato · ${CXF}</h3>`+(e.map(x=>`<div class="list-it"><div><b style="color:${x.v<0?'var(--err)':'var(--ok)'}">${x.v<0?'−':'+'} ${R$(Math.abs(x.v))}</b> · ${fmtD(x.data)}<br><span class="mut">${esc(x.txt)}</span><br><span class="mut" style="font-size:.78rem">saldo depois: ${R$(x.saldo)}</span></div>
       ${x.c?`<div class="acoes"><button class="icb" onclick="abrirCx('${x.c.id}')">✏️</button><button class="icb del" onclick="confirmar('Excluir este lançamento do caixa?',()=>{del('caixa','${x.c.id}');caixa()})">✕</button></div>`:''}</div>`).join('')||'<p class="mut">Nenhum lançamento.</p>')}}
-function abrirCx(id){const c=id?DB.caixa.find(x=>x.id===id):null;VOLTA=()=>caixa();const ps=DB.props.filter(p=>p!==PAG0);
-  const f=$('#cxForm');f.hidden=false;f.innerHTML=`<h3>${c?'Editar':'Novo'} lançamento</h3>
+function abrirCx(id,tp){const c=id?DB.caixa.find(x=>x.id===id):null;tp=c?c.tipo:tp;VOLTA=()=>caixa();const ps=DB.props.filter(p=>p!==PAG0);
+  const f=$('#cxForm');f.hidden=false;f.innerHTML=`<h3>${c?'Editar lançamento':(CXT[tp]||['Novo lançamento'])[0]}</h3>
   <label>Data</label>${campoData('cxD',c?c.data:hoje())}
   <label>Proprietário</label><select id="cxPr"><option value="">SELECIONE</option>${ps.map(p=>`<option ${c&&c.prop===p||!c&&p===CXF?'selected':''}>${p}</option>`).join('')}</select>
-  <label>Tipo</label><select id="cxT"><option value="">SELECIONE</option>${Object.keys(CXT).map(k=>`<option value="${k}" ${c&&c.tipo===k?'selected':''}>${CXT[k][0]}</option>`).join('')}</select>
+  <label>Tipo</label><select id="cxT"><option value="">SELECIONE</option>${CXT_OPC.concat(c&&!CXT_OPC.includes(c.tipo)?[c.tipo]:[]).map(k=>`<option value="${k}" ${tp===k?'selected':''}>${CXT[k][0]}</option>`).join('')}</select>
   <label>Valor (R$)</label><input id="cxV" type="text" inputmode="numeric" class="moeda" value="${c?fmtMoeda(c.valor):''}">
   <label>Conta FJK</label><select id="cxC">${optContas(PAG0,c?c.conta:CONTA0)}</select>
   <label>Observação</label><input id="cxO" value="${esc(c?c.obs:'')}">

@@ -148,7 +148,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='13';
+const APP_VERSAO='14';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -305,24 +305,24 @@ function formMov(tipo,ed){
   $('#cx').innerHTML=`<div class="card">
     ${EDIT?`<div class="hint" style="margin:0 0 6px">✏️ Editando lançamento de ${fmtD(EDIT.data)}</div>`:''}<label>Data</label>${campoData('fData',EDIT?EDIT.data:hoje())}
     ${tipo==='ENTRADA'||tipo==='SAIDA'?`<label>Tipo de ${tipo==='ENTRADA'?'entrada':'saída'}</label><select id="fSub">${(tipo==='ENTRADA'?SUB_ENT:SUB_SAI).map(x=>`<option>${x}</option>`).join('')}</select>`:''}
-    ${tipo==='ENTRADA'?`<div id="fOrBox" hidden><label>Fazenda de origem</label><select id="fOrig"><option value="">— escolher —</option>${FAZ_PROPRIAS.map(f=>`<option>${f}</option>`).join('')}</select></div>`:''}
+    ${tipo==='ENTRADA'?`<div id="fOrBox" hidden><label>Fazenda de origem</label><select id="fOrig"><option value="">SELECIONE</option>${FAZ_PROPRIAS.map(f=>`<option>${f}</option>`).join('')}</select></div>`:''}
     <label>${ehT||tipo==='SAIDA'?'<span id="fLoteLbl">'+(ehT?'Lote de origem':'Lote')+'</span>':(tipo==='ENTRADA'?'Lote destino':'Lote')}</label><select id="fLote">${optLotes()}</select>
-    ${tipo==='SAIDA'?`<div id="fTrBox" hidden><label>Destino</label><select id="fTrDest"><option value="">— escolher —</option><optgroup label="Fazendas próprias">${FAZ_PROPRIAS.map(f=>`<option value="FAZ:${f}">${f}</option>`).join('')}</optgroup><optgroup label="Locais de parceria">${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</optgroup></select>
+    ${tipo==='SAIDA'?`<div id="fTrBox" hidden><label>Destino</label><select id="fTrDest"><option value="">SELECIONE</option><optgroup label="Fazendas próprias">${FAZ_PROPRIAS.map(f=>`<option value="FAZ:${f}">${f}</option>`).join('')}</optgroup><optgroup label="Locais de parceria">${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</optgroup></select>
       <div id="fTrLoteBox" hidden><label>Lote de destino</label><select id="fTrLote"></select>
         <div id="fTrNovo" hidden>
         <div class="row"><div><label>Proprietário</label><select id="fTrNP">${DB.props.map(p=>`<option>${p}</option>`).join('')}</select></div><div><label>Valor (cab/mês)</label><input id="fTrNV" type="number" inputmode="decimal"></div></div></div></div></div>`:''}
     ${ehT?`<label>Lote de destino</label><select id="fDest">${optLotes()}</select>`:''}
 
     <label>Quantidade</label><input type="number" inputmode="numeric" id="fQtd" value="${ehM?1:''}" ${ehM?'readonly':''}>
-    ${ehM?`<label>Brinco do animal</label><input id="fBrinco" placeholder="Ex.: 20345 (vazio = sem brinco)">
+    ${ehM?`<label>Brinco do animal</label><input id="fBrinco">
       <label>Foto</label><label class="filebtn" style="text-transform:none;letter-spacing:0;font-size:1rem;margin:0">📷 Tirar ou escolher foto<input type="file" accept="image/*" id="fFoto"></label><img id="fPrev" class="foto" style="display:none">
-      <label>Causa / observação</label><input id="fObs" placeholder="Ex.: caiu na vala, onça...">`:`
+      <label>Causa / observação</label><input id="fObs">`:`
     <div class="row"><div><label>Peso total (kg)</label><input type="number" inputmode="decimal" id="fPeso"></div>
     <div><label>Peso médio (kg)</label><input type="number" inputmode="decimal" id="fPMed"></div></div>
     <div class="row"><div><label>Preço R$/@</label><input type="number" inputmode="decimal" id="fArroba"></div>
     <div><label>Valor total (R$)</label><input type="number" inputmode="decimal" id="fValor"></div></div>
     <div class="mut" id="fMedio" style="margin-top:8px"></div>
-    <label>Observação</label><input id="fObs" placeholder="${tipo==='ENTRADA'?'Ex.: desmama Centrão, compra fulano':'Ex.: venda JBS, foi para o Sítio'}">`}
+    <label>Observação</label><input id="fObs">`}
     <button class="bt" onclick="salvarMov('${tipo}')">${EDIT?'Salvar alteração':'Registrar '+({ENTRADA:'entrada',SAIDA:'saída',MORTE:'morte',TRANSF:'transferência'})[tipo]}</button>${EDIT?`<button class="bt sec" onclick="formMov('${tipo}')">Cancelar edição</button>`:''}
   </div>
   ${ehT?'<div class="hint">A transferência baixa do lote de origem e soma no destino na mesma data. Nas faturas, cada parceria cobra só os dias em que o animal esteve lá.</div>':''}
@@ -451,7 +451,7 @@ function despesas(){
   <label>Tipo</label><select id="dT"><option value="ARRENDAMENTO">PARCERIA</option><option>SALÁRIO</option><option>SAL MINERAL</option><option>VACINA/REMÉDIO</option><option>FRETE</option><option>OUTROS</option></select>
   <label>Local</label><select id="dA">${DB.arr.map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
   <label>Lote (opcional)</label><select id="dL"></select>
-  <label>Descrição</label><input id="dDs" placeholder="Ex.: aluguel do mês de novembro">
+  <label>Descrição</label><input id="dDs">
   <div class="row"><div><label>Valor (R$)</label><input type="number" inputmode="decimal" id="dV"></div><div><label>Situação</label><select id="dS"><option>PAGO</option><option>A PAGAR</option></select></div></div>
   <input type="hidden" id="dId"><button class="bt" id="dBt" onclick="salvarDesp()">Registrar despesa</button><button class="bt sec" id="dCanc" hidden onclick="despesas()">Cancelar edição</button></div>
   <div class="card fBox">${filtroMes('dfM','Mês',hoje().slice(0,7))}
@@ -484,15 +484,15 @@ function telaLocais(){setTimeout(syncSels);
   $('#cx').innerHTML=`<div class="row" id="llBts" style="margin-top:12px"><button class="bt" style="margin:0;padding:12px 4px" onclick="abrirArr()">+ Local</button><button class="bt" style="margin:0;padding:12px 4px" onclick="abrirLote()">+ Lote</button><button class="bt ${FL.inat?'':'sec'}" style="margin:0;padding:12px 4px" onclick="FL.inat=!FL.inat;telaLocais()">${FL.inat?'◀ Ativos':'Inativos'}</button></div>
   ${FL.inat?'<div class="hint" style="margin-top:10px">Mostrando só os <b>inativos</b>. Toque num local ou lote para abrir e reativar.</div>':''}
   <div class="card" id="aForm" hidden><h3 id="aTit">Novo local</h3><input type="hidden" id="aId">
-   <label>Local (arrendador)</label><input id="aN" placeholder="Ex.: FIRMINO">
-   <label>Cidade</label><input id="aC" placeholder="Ex.: SÃO DOMINGOS">
+   <label>Local (parceiro)</label><input id="aN">
+   <label>Cidade</label><input id="aC">
    <input type="hidden" id="aAt" value="1">
    <button class="bt" onclick="salvarArr()">Salvar local</button><button class="bt sec" onclick="telaLocais()">Cancelar</button>
    <button class="bt sec" id="aInat" hidden style="border-color:var(--err);color:var(--err)" onclick="inatArr()"></button></div>
   <div class="card" id="lForm" hidden><h3 id="lTit">Novo lote</h3><input type="hidden" id="lId">
-   <label>Local</label><select id="lA">${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
-   <label>Categoria</label><select id="lCat"><option value="">— escolher —</option>${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
-   <label>Proprietário</label><select id="lP">${DB.props.map(p=>`<option>${p}</option>`).join('')}</select>
+   <label>Local</label><select id="lA"><option value="">SELECIONE</option>${DB.arr.filter(a=>a.ativo).map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
+   <label>Categoria</label><select id="lCat"><option value="">SELECIONE</option>${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+   <label>Proprietário</label><select id="lP"><option value="">SELECIONE</option>${DB.props.map(p=>`<option>${p}</option>`).join('')}</select>
    <div class="row"><div><label>Valor (cab/mês)</label><input id="lV" type="number" inputmode="decimal"></div>
    <div><label>Salário (opcional)</label><input id="lS" type="number" inputmode="decimal"></div></div>
    <label>Observação</label><textarea id="lObs" rows="2"></textarea>
@@ -537,7 +537,7 @@ function inatLote(){const l=loteDe($('#lId').value);if(!l.id)return;
   if(l.ativo){const c=saldo(l.id);if(c>0)return toast('Lote ainda tem '+c+' cab — transfira ou dê saída antes');confirmar('Inativar o lote '+rotLote(l)+'?',()=>{l.ativo=false;put('lotes',l);toast('Lote inativado');telaLocais()})}
   else{const a=arrDe(l.arrId);if(a.id&&!a.ativo){a.ativo=true;put('arr',a)}l.ativo=true;put('lotes',l);toast('Lote reativado');FL.inat=false;telaLocais()}}
 function salvarLote(){const id=$('#lId').value;
-  if(!$('#lCat').value)return toast('Escolha a categoria do lote');const n=(arrDe($('#lA').value).nome+' - '+$('#lCat').value).toUpperCase();
+  if(!$('#lA').value)return toast('Selecione o local');if(!$('#lCat').value)return toast('Selecione a categoria');if(!$('#lP').value)return toast('Selecione o proprietário');const n=(arrDe($('#lA').value).nome+' - '+$('#lCat').value).toUpperCase();
   const d={arrId:$('#lA').value,nome:n,prop:$('#lP').value,valorCab:+$('#lV').value||0,salario:+$('#lS').value||0,categoria:$('#lCat').value,obs:$('#lObs').value.trim(),ativo:$('#lAt').value==='1'};
   if(id){if(!d.ativo&&saldo(id)>0)return toast('Lote ainda tem '+saldo(id)+' cab — transfira ou dê saída antes');put('lotes',Object.assign(loteDe(id),d))}
   else put('lotes',Object.assign({id:nid('L')},d));

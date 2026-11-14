@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='33';
+const APP_VERSAO='34';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -830,8 +830,30 @@ function gestao(){
 function addProp(){const p=$('#nP').value.trim().toUpperCase();if(!p||DB.props.includes(p))return toast('Informe um nome novo');put('props',{id:p,nome:p});gestao()}
 
 try{if(/[?&]menu=1/.test(location.search))localStorage.setItem('fjkMenu','1');if(localStorage.getItem('fjkMenu')==='1')$('#btnMenuFJK').hidden=false}catch(e){}
-garanteContas();go('menu');carregar();
-if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+garanteContas();
+/* ===== Atualização automática (mesma regra do Gestão de Tratos): checa versao.json e recarrega sozinho quando ninguém está digitando ===== */
+function temDigitacao(){if(document.querySelector('.modal,.pk'))return true;const ae=document.activeElement;if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)&&ae.offsetParent)return true;
+  if(EDIT)return true;for(const id of ['dForm','cxForm']){const f=$('#'+id);if(f&&!f.hidden&&f.innerHTML)return true}
+  if(['entrada','saida','morte','transf'].includes(TELA)){const c=$('#cx .card');if(c&&[...c.querySelectorAll('input:not([type=hidden]):not([type=date]):not([type=file]),select,textarea')].some(x=>x.id!=='fData'&&!(x.id==='fQtd'&&TELA==='morte'&&x.value==='1')&&x.value&&x.value!==''))return true;if(typeof FOTOS!=='undefined'&&FOTOS.length)return true}
+  return false}
+let atuPend=false;
+function recarregarQuandoPuder(v){if(temDigitacao()){if(!atuPend){atuPend=true;const t=setInterval(()=>{if(!temDigitacao()){clearInterval(t);atuPend=false;recarregarQuandoPuder(v)}},4000)}return}
+  try{salvar();salvarFila();sessionStorage.setItem('voltarPara',TELA||'menu');sessionStorage.setItem('recarregadoPara',(v||'')+'|'+Date.now())}catch(e){}location.reload()}
+async function checarVersao(){if(!navigator.onLine||location.protocol!=='https:')return;
+  try{const v=String((await (await fetch('versao.json?t='+Date.now(),{cache:'no-store'})).json()).versao||'');if(!v||v===APP_VERSAO)return;
+    let ja='';try{ja=sessionStorage.getItem('recarregadoPara')||''}catch(e){}const [jv,jt]=ja.split('|');if(jv===v&&Date.now()-(+jt||0)<2*60000)return;
+    recarregarQuandoPuder(v)}catch(e){}}
+let telaIni='menu';try{const vp=sessionStorage.getItem('voltarPara');sessionStorage.removeItem('voltarPara');if(vp&&TELAS[vp]&&vp!=='gestao')telaIni=vp;
+  const rp=sessionStorage.getItem('recarregadoPara');if(rp&&rp.split('|')[0]===APP_VERSAO&&Date.now()-(+rp.split('|')[1]||0)<60000)setTimeout(()=>toast('App atualizado para v'+APP_VERSAO+' ✓'),600)}catch(e){}
+go(telaIni);carregar();
+setTimeout(checarVersao,3000);setInterval(checarVersao,3*60000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){checarVersao()}});
+window.addEventListener('online',checarVersao);
+if('serviceWorker' in navigator&&location.protocol==='https:'){
+  const tinha=!!navigator.serviceWorker.controller;let recarregou=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!tinha||recarregou)return;recarregou=true;recarregarQuandoPuder('')});
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{const ver=()=>{if(navigator.onLine)reg.update().catch(()=>{})};
+    setInterval(ver,10*60000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')ver()});window.addEventListener('online',ver)}).catch(()=>{})}
 </script>
 </body>
 </html>

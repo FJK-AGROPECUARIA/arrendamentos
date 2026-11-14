@@ -57,6 +57,10 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
 .bt{display:block;width:100%;margin-top:14px;background:var(--accent);border:2px solid var(--accent);color:#fff;border-radius:10px;padding:14px;font:inherit;font-size:1.1rem;font-weight:700;cursor:pointer}
 .bt.sec{background:#fff;color:var(--accent)}.bt.sec:active{background:var(--accent);color:#fff}
 .fat{font-size:.8rem}.fat th,.fat td{padding-left:3px;padding-right:3px}.fat th{font-size:.62rem;letter-spacing:.02em}
+.expRow .bt{font-size:.95rem;padding:9px 4px}
+.arqCaixa{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
+.arqBox{background:#fff;border-radius:16px;padding:18px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}.arqTit{display:flex;flex-direction:column;gap:4px}.arqTit small{color:var(--muted)}
+.arqBox button{padding:12px;border-radius:10px;border:2px solid var(--accent);background:#fff;color:var(--accent);font:inherit;font-weight:700}.arqBox button.primary{background:#2e7d32;border-color:#2e7d32;color:#fff}
 .btRow{display:flex;gap:8px;margin-top:14px}.btRow .bt{margin:0;flex:1;padding:9px 6px;font-size:1rem;color:#fff}.btRow .bt[hidden]{display:none}
 .bt.verde{background:#2e7d32;border-color:#2e7d32}.bt.verm{background:#c62828;border-color:#c62828}.bt.amar{background:#f2b705;border-color:#f2b705;color:#3a2a00!important}
 .bt.sm{display:inline-block;width:auto;margin:0;padding:7px 12px;font-size:.88rem}
@@ -160,7 +164,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='23';
+const APP_VERSAO='25';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -448,20 +452,22 @@ function faturas(){
       tg+=ta;ts+=sa;
       html+=`<div class="card"><div class="arr-h"><h3>${a.nome}</h3><span class="mut">${a.cidade}</span></div><div class="scroll"><table class="fat">
       <tr><th>Lote</th><th class="n">Início</th><th class="n">Mov.</th><th class="n">Cab.</th><th class="n">Valor</th></tr>${rows}
-      <tr class="tot"><td colspan="4">Valor do mês${(()=>{const pd=r2(r2(ta)-r2(pagosDe(a.id,ym).reduce((s,p)=>s+(+p.valor||0),0)));return pd>0.004?` <button class="bt verde" style="display:inline-block;width:auto;margin:0 0 0 8px;padding:5px 12px;font-size:.85rem" onclick="abrirPag('${a.id}','${ym}',${pd})">💵 Pagar</button>`:''})()}</td><td class="n">${R$(ta)}</td></tr>
+      <tr class="tot"><td colspan="4">Valor do mês${(()=>{const pd=r2(r2(ta)-somaP(pagosDe(a.id,ym,'P')));return pd>0.004?` <button class="bt verde" style="display:inline-block;width:auto;margin:0 0 0 8px;padding:5px 12px;font-size:.85rem" onclick="abrirPag('${a.id}','${ym}',${pd},'P')">💵 Pagar</button>`:''})()}</td><td class="n">${R$(ta)}</td></tr>
 
-      ${sa?`<tr><td colspan="4">Salário do mês <span class="mut">(despesa separada)</span></td><td class="n">${R$(sa)}</td></tr>`:''}</table></div>${pagBloco(a,ym,ta)}</div>`});
-    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Parcerias</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pg=r2(DB.pags.filter(p=>p.ref===ym&&(!fa||p.arrId===fa)).reduce((s,p)=>s+(+p.valor||0),0));return `<tr><td>Parcerias pagas</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Parcerias pendentes</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>`})()}</table></div>`};
+      ${sa?`<tr class="tot"><td colspan="4">Salário do mês${(()=>{const pd=r2(r2(sa)-somaP(pagosDe(a.id,ym,'S')));return pd>0.004?` <button class="bt verde" style="display:inline-block;width:auto;margin:0 0 0 8px;padding:5px 12px;font-size:.85rem" onclick="abrirPag('${a.id}','${ym}',${pd},'S')">💵 Pagar</button>`:''})()}</td><td class="n">${R$(sa)}</td></tr>`:''}</table></div>${pagBloco(a,ym,ta,sa)}</div>`});
+    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Parcerias</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pp=DB.pags.filter(p=>p.ref===ym&&(!fa||p.arrId===fa)),pg=somaP(pp.filter(p=>!ehSal(p))),sg=somaP(pp.filter(ehSal));return `<tr><td>Parcerias pagas</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Parcerias pendentes</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>${ts?`<tr><td>Salários pagos</td><td class="n" style="color:var(--ok)">${R$(sg)}</td></tr><tr><td><b>Salários pendentes</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(ts)-sg,0))}</b></td></tr>`:''}`})()}</table></div>`};
   $('#fM').onchange=r;$('#fA').onchange=r;r();
 }
 const r2=v=>Math.round((+v||0)*100)/100;
-const pagosDe=(arrId,ym)=>DB.pags.filter(p=>p.arrId===arrId&&p.ref===ym);
-function pagBloco(a,ym,ta){const ps=pagosDe(a.id,ym),pg=r2(ps.reduce((s,p)=>s+(+p.valor||0),0)),pend=r2(r2(ta)-pg);if(!(r2(ta)>0)&&!ps.length)return'';
+const ehSal=p=>String(p.id).startsWith('PS_');const somaP=ps=>r2(ps.reduce((s,p)=>s+(+p.valor||0),0));
+const pagosDe=(arrId,ym,tp)=>DB.pags.filter(p=>p.arrId===arrId&&p.ref===ym&&(!tp||(tp==='S')===ehSal(p)));
+function pagBloco(a,ym,ta,sa){const ps=pagosDe(a.id,ym);if(!(r2(ta)>0)&&!(r2(sa)>0)&&!ps.length)return'';
   const lin=(t,v,c)=>`<div style="display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #eee"><span>${t}</span><b style="color:${c}">${v}</b></div>`;
-  return `<div style="margin-top:6px">${pg?lin('Pago',R$(pg),'var(--ok)'):''}${lin(pend>0.004?'<b>Pendente</b>':'<b>Quitado</b>',R$(Math.max(pend,0)),pend>0.004?'var(--err)':'var(--ok)')}
-  ${ps.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #eee"><span class="mut" style="flex:1">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}</div>`}
-function abrirPag(arrId,ym,pend){const a=arrDe(arrId);const contas=[...new Set(DB.pags.map(p=>p.conta).filter(Boolean))];
-  const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">Pagar ${esc(a.nome)} · ${ym.slice(5)}/${ym.slice(0,4)}</h3>
+  const bloco=(nome,tot,tp)=>{const pg=somaP(pagosDe(a.id,ym,tp)),pend=r2(r2(tot)-pg);return (pg?lin('Pago'+nome,R$(pg),'var(--ok)'):'')+lin(pend>0.004?'<b>Pendente'+nome+'</b>':'<b>Quitado'+nome+'</b>',R$(Math.max(pend,0)),pend>0.004?'var(--err)':'var(--ok)')};
+  return `<div style="margin-top:6px">${r2(ta)>0||!sa?bloco(sa?' (valor do mês)':'',ta,'P'):''}${sa?bloco(' (salário)',sa,'S'):''}
+  ${ps.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #eee"><span class="mut" style="flex:1">${fmtD(p.data)} · ${ehSal(p)?'Salário · ':''}${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="delPag('${p.id}')">✕</button></div>`).join('')}</div>`}
+function abrirPag(arrId,ym,pend,tp){const sal=tp==='S';const a=arrDe(arrId);const contas=[...new Set(DB.pags.map(p=>p.conta).filter(Boolean))];
+  const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">Pagar ${sal?'salário':'valor do mês'} · ${esc(a.nome)} · ${ym.slice(5)}/${ym.slice(0,4)}</h3>
   <p class="mut" style="margin:0 0 6px">Pendente: <b>${R$(pend)}</b></p>
   <label>Data</label>${campoData('pgD',hoje())}
   <label>Valor (R$)</label><input id="pgV" type="text" inputmode="numeric" class="moeda" value="${fmtMoeda(pend)}">
@@ -471,9 +477,9 @@ function abrirPag(arrId,ym,pend){const a=arrDe(arrId);const contas=[...new Set(D
   document.body.appendChild(m);m.querySelector('#pgN').onclick=()=>m.remove();
   m.querySelector('#pgS').onclick=()=>{const v=r2(mv('pgV')),dt=$('#pgD').value;if(!dt)return toast('Informe a data');if(!(v>0))return toast('Informe o valor');
     if(v>pend+0.004)return toast('Valor maior que o pendente ('+R$(pend)+')');if(!$('#pgC').value.trim())return toast('Informe a conta de pagamento');
-    const pid=nid('P'),conta=$('#pgC').value.trim().toUpperCase(),ob=$('#pgO').value.trim(),rf=ym.slice(5)+'/'+ym.slice(0,4);
+    const pid=sal?nid('PS_'):nid('P'),conta=$('#pgC').value.trim().toUpperCase(),ob=$('#pgO').value.trim(),rf=ym.slice(5)+'/'+ym.slice(0,4);
     put('pags',{id:pid,arrId,ref:ym,data:dt,valor:v,conta,obs:ob,criadoEm:new Date().toISOString()});
-    put('desp',{id:'D'+pid,data:dt,tipo:'ARRENDAMENTO',arrId,loteId:'',desc:'Pagamento parceria '+rf+' · '+conta+(ob?' · '+ob:''),valor:v,status:'PAGO',ref:rf,pagoEm:dt});
+    put('desp',{id:'D'+pid,data:dt,tipo:sal?'SALÁRIO':'ARRENDAMENTO',arrId,loteId:'',desc:(sal?'Pagamento salário ':'Pagamento parceria ')+rf+' · '+conta+(ob?' · '+ob:''),valor:v,status:'PAGO',ref:rf,pagoEm:dt,conta});
     m.remove();toast(v<pend-0.004?'Pagamento parcial lançado':'Pago');go('faturas')}}
 function delPag(id){confirmar('Excluir este pagamento? A despesa lançada junto também será excluída.',()=>{del('pags',id);if(DB.desp.some(d=>d.id==='D'+id))del('desp','D'+id);go('faturas')})}
 function gerarDespesas(ym){
@@ -511,10 +517,18 @@ function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value,pp=$('#dfP').val
   const daProp=d=>!pp||(d.loteId?loteDe(d.loteId).prop===pp:DB.lotes.some(l=>l.arrId===d.arrId&&l.prop===pp));
   const ds=DB.desp.filter(d=>(!ym||d.data.startsWith(ym))&&(!s||d.status===s)&&daProp(d)).sort((a,b)=>b.data.localeCompare(a.data));
   const tot=ds.reduce((a,d)=>a+d.valor,0),ap=ds.filter(d=>d.status==='A PAGAR').reduce((a,d)=>a+d.valor,0);
-  $('#dLst').innerHTML=(ds.map(d=>`<div class="list-it"><div><b>${R$(d.valor)}</b> · ${fmtD(d.data)} <span class="tag ${d.status==='PAGO'?'E':'M'}">${d.status}</span><br><span class="mut">${d.tipo==='ARRENDAMENTO'?'PARCERIA':d.tipo} · ${arrDe(d.arrId).nome||''}${d.loteId?' · '+loteDe(d.loteId).nome:''}${d.desc?' · '+d.desc:''}</span></div>
+  $('#dLst').innerHTML=(ds.map(d=>`<div class="list-it"><div><b>${R$(d.valor)}</b> · ${fmtD(d.data)} <span class="tag ${d.status==='PAGO'?'E':'M'}">${d.status}</span><br><span class="mut">${d.tipo==='ARRENDAMENTO'?'PARCERIA':d.tipo} · ${arrDe(d.arrId).nome||''}${d.status==='PAGO'&&(d.pagoEm||d.conta)?' · pago '+(d.pagoEm?fmtD(d.pagoEm):'')+(d.conta?' ('+d.conta+')':''):''}${d.loteId?' · '+loteDe(d.loteId).nome:''}${d.desc?' · '+d.desc:''}</span></div>
   <div class="acoes">${d.status==='A PAGAR'?`<button class="bt sm" style="height:40px" onclick="pagarDesp('${d.id}')">Pagar</button>`:''}<button class="icb" title="Editar" onclick="editarDesp('${d.id}')">✏️</button><button class="icb del" title="Excluir" onclick="confirmar('Excluir esta despesa?',()=>{del('desp','${d.id}');listaDesp()})">✕</button></div></div>`).join('')||'<p class="mut">Nenhuma despesa no filtro.</p>')
   +`<table style="margin-top:8px"><tr class="tot"><td>Total</td><td class="n">${R$(tot)}</td></tr><tr><td>A pagar</td><td class="n" style="color:var(--err)">${R$(ap)}</td></tr></table>`}
-function pagarDesp(id){const d=DB.desp.find(x=>x.id===id);d.status='PAGO';d.pagoEm=hoje();put('desp',d);listaDesp();toast('Marcado como pago')}
+function pagarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;const contas=[...new Set([...DB.pags.map(p=>p.conta),...DB.desp.map(x=>x.conta)].filter(Boolean))];
+  const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">Pagar despesa</h3>
+  <p class="mut" style="margin:0 0 6px">${esc(d.tipo==='ARRENDAMENTO'?'PARCERIA':d.tipo)} · ${esc(arrDe(d.arrId).nome||'')} · <b>${R$(d.valor)}</b></p>
+  <label>Data do pagamento</label>${campoData('pdD',hoje())}
+  <label>Conta de pagamento</label><input id="pdC" list="pdCL"><datalist id="pdCL">${contas.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+  <div class="btRow"><button class="bt verm" id="pdN">Cancelar</button><button class="bt verde" id="pdS">Salvar</button></div></div>`;
+  document.body.appendChild(m);m.querySelector('#pdN').onclick=()=>m.remove();
+  m.querySelector('#pdS').onclick=()=>{const dt=$('#pdD').value,c=$('#pdC').value.trim().toUpperCase();if(!dt)return toast('Informe a data');if(!c)return toast('Informe a conta de pagamento');
+    d.status='PAGO';d.pagoEm=dt;d.conta=c;put('desp',d);m.remove();listaDesp();toast('Pago ✓')}}
 
 /* ===================== GESTÃO (senha 0000) ===================== */
 function fmtMoeda(v){v=+v;if(!v&&v!==0||v===0)return'';return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -559,6 +573,7 @@ function telaLocais(){setTimeout(syncSels);VOLTA=FL.inat?()=>{FL.inat=false;tela
    <div class="btRow"><button class="bt amar" id="lInat" hidden onclick="inatLote()"></button><button class="bt verm" onclick="telaLocais()">Cancelar</button><button class="bt verde" onclick="salvarLote()">Salvar</button></div></div>
   <div class="card fBox" id="llFil" ${FL.inat?'hidden':''}>${filtroSel('flLoc','Parceiro',[['','Todos'],...DB.arr.filter(a=>a.ativo).map(a=>[a.id,a.nome])],FL.loc)}
    ${filtroSel('flProp','Proprietário',[['','Todos'],...DB.props.map(p=>[p,p])],FL.prop)}
+   <div class="btRow expRow"><button class="bt verde" onclick="relLotes('pdf')">📄 PDF</button><button class="bt verde" onclick="relLotes('img')">🖼 Foto</button><button class="bt verde" onclick="relLotes('xls')">📊 Excel</button></div>
    <div id="llRes" class="mut" style="margin-top:10px;text-align:center"></div></div>
   <div id="llLst"></div>`;
   $('#flLoc').onchange=e=>{FL.loc=e.target.value;telaLocais();syncSels()};$('#flProp').onchange=e=>{FL.prop=e.target.value;telaLocais();syncSels()};
@@ -573,6 +588,97 @@ function telaLocais(){setTimeout(syncSels);VOLTA=FL.inat?()=>{FL.inat=false;tela
     <span class="mut">${saldo(l.id)} cab · ${R$(l.valorCab)}/cab/mês${l.salario?' · salário '+R$(l.salario):''}${l.ativo?'':' · <b style="color:var(--err)">inativo</b>'}</span></div><span class="seta">›</span></div>`).join('')||'<p class="mut">Nenhum lote.</p>'}</div>`}).join('')||`<div class="card mut">${FL.inat?'Nenhum parceiro ou lote inativo.':'Nenhum parceiro.'}</div>`;
 }
 const arrend=telaLocais;
+/* ===================== RELATÓRIO (Foto / PDF / Excel) — mesmo padrão do Tratos ===================== */
+function baixar(blob,nome){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=String(nome).normalize('NFD').replace(/[̀-ͯ]/g,'');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),120000)}
+function salvarOuEnviar(blobs,nomes,tipo){return new Promise(async res=>{
+  const fs=blobs.map((b,i)=>new File([b],nomes[i],{type:tipo}));let pode=false;try{pode=!!(navigator.canShare&&navigator.canShare({files:fs}))}catch(e){}
+  const movel=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const baixarTudo=()=>{blobs.forEach((bl,i)=>setTimeout(()=>baixar(bl,nomes[i]),i*600));toast('Arquivo salvo (Downloads)')};
+  if(!movel||!pode){baixarTudo();return res()}
+  try{await navigator.share({files:fs});return res()}catch(x){if(x&&x.name==='AbortError')return res();if(!x||x.name!=='NotAllowedError'){baixarTudo();return res()}}
+  const kb=Math.max(1,Math.round(blobs.reduce((a,b)=>a+b.size,0)/1024)),ic=/pdf/.test(tipo)?'📄':/image/.test(tipo)?'🖼':'📊';
+  const w=document.createElement('div');w.className='arqCaixa';
+  w.innerHTML=`<div class="arqBox"><div class="arqTit">${ic} <b>${esc(nomes[0])}</b><small>${kb.toLocaleString('pt-BR')} KB · pronto</small></div><button class="primary" data-arq="abrir">📤 Abrir</button><button data-arq="x">Cancelar</button></div>`;
+  w.addEventListener('click',async e=>{const b=e.target.closest('[data-arq]');if(!b&&e.target!==w)return;if(b&&b.dataset.arq==='abrir'){try{await navigator.share({files:fs})}catch(x){if(x.name!=='AbortError')baixarTudo()}}w.remove();res()});
+  document.body.appendChild(w)})}
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function zip(files){const enc=new TextEncoder();const parts=[];const central=[];let off=0;
+  for(const [name,txt] of files){const nb=enc.encode(name),db=enc.encode(txt),crc=crc32(db);const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,0,true);h.setUint16(10,0,true);h.setUint16(12,0x21,true);h.setUint32(14,crc,true);h.setUint32(18,db.length,true);h.setUint32(22,db.length,true);h.setUint16(26,nb.length,true);h.setUint16(28,0,true);
+    parts.push(new Uint8Array(h.buffer),nb,db);const c=new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(10,0,true);c.setUint16(12,0,true);c.setUint16(14,0x21,true);c.setUint32(16,crc,true);c.setUint32(20,db.length,true);c.setUint32(24,db.length,true);c.setUint16(28,nb.length,true);c.setUint32(42,off,true);
+    central.push(new Uint8Array(c.buffer),nb);off+=30+nb.length+db.length}
+  const csize=central.reduce((a,b)=>a+b.length,0);const e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,csize,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...central,new Uint8Array(e.buffer)],{type:XT})}
+const XT='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const xe=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function colL(i){let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+function sheetXml(rows,widths){const cols='<cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols>';
+  const body=rows.map((r,ri)=>`<row r="${ri+1}">`+r.map((c,ci)=>{if(c==null)return'';const ref=colL(ci)+(ri+1);const st=c.s?` s="${c.s}"`:'';
+    if(c.f)return `<c r="${ref}"${st}><f>${xe(c.f)}</f>${typeof c.v==='number'?`<v>${c.v}</v>`:''}</c>`;
+    if(typeof c.v==='number')return `<c r="${ref}"${st}><v>${c.v}</v></c>`;return `<c r="${ref}"${st} t="inlineStr"><is><t>${xe(c.v)}</t></is></c>`}).join('')+'</row>').join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${body}</sheetData></worksheet>`}
+/* estilos: 1 título, 4 inteiro, 7 total inteiro, 9 total texto, 12 R$, 13 total R$ */
+function montarXlsx(ws){
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="166" formatCode="#,##0"/><numFmt numFmtId="170" formatCode="&quot;R$&quot; #,##0.00"/></numFmts>
+<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
+<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF6D4321"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF1E8DE"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="14"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment horizontal="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="166" fontId="2" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="170" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="170" fontId="2" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const ct=ws.map((w,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('');
+  return zip([['[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${ct}</Types>`],
+    ['_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${ws.map((w,i)=>`<sheet name="${xe(w[0])}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets><calcPr calcId="0" fullCalcOnLoad="1"/></workbook>`],
+    ['xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${ws.map((w,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${ws.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml',styles],...ws.map((w,i)=>[`xl/worksheets/sheet${i+1}.xml`,sheetXml(w[1],w[2])])])}
+function fzPdf(cvs){const enc=new TextEncoder(),partes=[],offs=[];let tam=0;const add=d=>{const b=typeof d==='string'?enc.encode(d):d;partes.push(b);tam+=b.length};
+  const obj=(n,txt,bin)=>{offs[n]=tam;add(`${n} 0 obj\n`+txt);if(bin){add(bin);add('\nendstream')}add('\nendobj\n')};
+  add('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');const n=cvs.length,kids=[];
+  const imgs=cvs.map(c=>{const u=c.toDataURL('image/jpeg',0.85),b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a});
+  const pw=595.28;cvs.forEach((c,i)=>kids.push(3+i*3));
+  obj(1,'<< /Type /Catalog /Pages 2 0 R >>');obj(2,`<< /Type /Pages /Count ${n} /Kids [${kids.map(k=>k+' 0 R').join(' ')}] >>`);
+  cvs.forEach((c,i)=>{const pg=3+i*3,ct=pg+1,im=pg+2,pwc=c.width>c.height?841.89:pw,ph=(pwc*c.height/c.width).toFixed(2),cmd=`q ${pwc} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
+    obj(pg,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pwc} ${ph}] /Resources << /XObject << /Im0 ${im} 0 R >> >> /Contents ${ct} 0 R >>`);
+    obj(ct,`<< /Length ${cmd.length} >>\nstream\n${cmd}\nendstream`);
+    obj(im,`<< /Type /XObject /Subtype /Image /Width ${c.width} /Height ${c.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgs[i].length} >>\nstream\n`,imgs[i])});
+  const tot=3+n*3,xref=tam;let s=`xref\n0 ${tot}\n0000000000 65535 f \n`;for(let i=1;i<tot;i++)s+=String(offs[i]).padStart(10,'0')+' 00000 n \n';
+  add(s+`trailer\n<< /Size ${tot} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);return new Blob(partes,{type:'application/pdf'})}
+const dataArq=d=>d.slice(8,10)+'-'+d.slice(5,7)+'-'+d.slice(0,4);
+/* dados do relatório = o que está filtrado na tela */
+function dadosLotes(){const ps=[];DB.arr.filter(a=>a.ativo&&(!FL.loc||a.id===FL.loc)).forEach(a=>{const ls=DB.lotes.filter(l=>l.arrId===a.id&&l.ativo&&(!FL.prop||l.prop===FL.prop));if(!ls.length)return;
+  ps.push({a,ls:ls.map(l=>({cat:catLote(l)||sufLote(l)||'sem categoria',prop:l.prop,cab:saldo(l.id),vc:+l.valorCab||0,sal:+l.salario||0,obs:l.obs||''}))})});return ps}
+function tituloRel(){const f=[FL.loc?arrDe(FL.loc).nome:'',FL.prop?'Proprietário '+FL.prop:''].filter(Boolean).join(' · ');return {t:'FJK - Parceiros e Lotes - '+fmtD(hoje()),f}}
+function imgLotes(ps){const {t,f}=tituloRel();const M=30,cols=[['Categoria',300,'l'],['Proprietário',220,'c'],['Cabeças',150,'r'],['R$/cab/mês',190,'r'],['Salário',170,'r']];
+  const W=M*2+cols.reduce((a,c)=>a+c[1],0),RH=46,esc2=2;let H=120+(f?30:0);ps.forEach(p=>{H+=50+40+RH*p.ls.length+20});H+=80;
+  const cv=document.createElement('canvas');cv.width=W*esc2;cv.height=H*esc2;const c=cv.getContext('2d');c.scale(esc2,esc2);const F='-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
+  c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#5a3618';c.fillRect(0,0,W,90);c.fillStyle='#a7bc09';c.fillRect(0,90,W,6);
+  c.fillStyle='#fff';c.font=`700 32px ${F}`;c.textBaseline='middle';c.fillText(t,M,46);let y=120;
+  if(f){c.fillStyle='#5d6b7a';c.font=`600 20px ${F}`;c.fillText('Filtro: '+f,M,y);y+=30}
+  const px=(k,al)=>{let x=M;for(let i=0;i<k;i++)x+=cols[i][1];const w=cols[k][1];return al==='l'?x+10:al==='c'?x+w/2:x+w-10};let tg=0;
+  ps.forEach(p=>{const cab=p.ls.reduce((s,l)=>s+l.cab,0);tg+=cab;c.fillStyle='#f1e8de';c.fillRect(M,y,W-2*M,44);c.fillStyle='#3d2410';c.font=`700 23px ${F}`;c.textAlign='left';
+    c.fillText(`${p.a.nome} - ${p.a.cidade} - ${N(cab)} cab`,M+12,y+22);y+=50;c.font=`700 15px ${F}`;c.fillStyle='#5d6b7a';
+    cols.forEach(([tt,w,al],k)=>{c.textAlign=al==='l'?'left':al==='c'?'center':'right';c.fillText(tt.toUpperCase(),px(k,al),y+20)});y+=40;c.fillStyle='#e4dccf';c.fillRect(M,y-2,W-2*M,2);
+    p.ls.forEach((l,i)=>{if(i%2){c.fillStyle='#faf7f3';c.fillRect(M,y,W-2*M,RH)}c.fillStyle='#11253d';c.font=`500 21px ${F}`;
+      [l.cat+(l.obs?' ('+l.obs+')':''),l.prop,N(l.cab),l.vc?R$(l.vc):'—',l.sal?R$(l.sal):'—'].forEach((v,k)=>{const [,w,al]=cols[k];c.textAlign=al==='l'?'left':al==='c'?'center':'right';let fs=21;c.font=`${k===2?700:500} ${fs}px ${F}`;while(c.measureText(v).width>w-16&&fs>12){fs--;c.font=`${k===2?700:500} ${fs}px ${F}`}c.fillText(v,px(k,al),y+RH/2)});
+      y+=RH;c.fillStyle='#e4dccf';c.fillRect(M,y-1,W-2*M,1)});y+=20});
+  c.fillStyle='#5a3618';c.fillRect(M,y,W-2*M,56);c.fillStyle='#a7bc09';c.fillRect(M,y,W-2*M,4);c.fillStyle='#fff';c.font=`800 24px ${F}`;c.textAlign='left';c.fillText('TOTAL GERAL',M+12,y+31);c.textAlign='right';c.fillText(N(tg)+' cab',px(2,'r'),y+31);
+  return cv}
+function xlsLotes(ps){const H=t=>({v:t,s:1});const rows=[[H('Parceiro'),H('Cidade'),H('Categoria'),H('Proprietário'),H('Cabeças'),H('Valor cab/mês'),H('Salário'),H('Observação')]];
+  ps.forEach(p=>p.ls.forEach(l=>rows.push([{v:p.a.nome},{v:p.a.cidade},{v:l.cat},{v:l.prop},{v:l.cab,s:4},{v:l.vc,s:12},{v:l.sal,s:12},{v:l.obs}])));
+  const L=rows.length,tg=ps.reduce((s,p)=>s+p.ls.reduce((a,l)=>a+l.cab,0),0);
+  rows.push([{v:'TOTAL',s:9},{v:'',s:9},{v:'',s:9},{v:'',s:9},{f:`SUM(E2:E${L})`,v:tg,s:7},{v:'',s:9},{v:'',s:9},{v:'',s:9}]);
+  return montarXlsx([['Parceiros e Lotes',rows,[18,16,18,14,10,14,13,24]]])}
+async function relLotes(tp){const ps=dadosLotes();if(!ps.length)return toast('Nada para gerar com esse filtro');const {f}=tituloRel();const nome='FJK - Parceiros e Lotes - '+dataArq(hoje())+(f?' - '+f:'');
+  try{if(tp==='xls')return await salvarOuEnviar([xlsLotes(ps)],[nome+'.xlsx'],XT);const cv=imgLotes(ps);
+    if(tp==='pdf')return await salvarOuEnviar([fzPdf([cv])],[nome+'.pdf'],'application/pdf');
+    const b=await new Promise(k=>cv.toBlob(k,'image/png'));return await salvarOuEnviar([b],[nome+'.png'],'image/png')}catch(e){toast('Não consegui gerar o arquivo')}}
+
 function abrirArr(){VOLTA=()=>telaLocais();$('#aForm').hidden=false;$('#lForm').hidden=true;$('#llBts').hidden=true;$('#aTit').textContent='Novo parceiro';scrollTo(0,0)}
 function editArr(id){abrirArr();const a=arrDe(id);$('#aId').value=id;$('#aN').value=a.nome;$('#aC').value=a.cidade;$('#aAt').value=a.ativo?'1':'0';$('#aTit').textContent='Editar '+a.nome;const b=$('#aInat');b.hidden=false;b.textContent=a.ativo?'Inativar':'Reativar';scrollTo(0,0)}
 function inatArr(){const a=arrDe($('#aId').value);if(!a.id)return;

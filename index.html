@@ -26,6 +26,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-
 .topoTxt::before{content:'';position:absolute;left:0;top:16%;bottom:16%;width:2px;border-radius:2px;background:var(--lima);opacity:.85}
 .topoTxt h1{margin:0;color:#fff;font-size:clamp(12px,3.6vw,19px);letter-spacing:.04em;font-weight:800;line-height:1.15;max-width:100%}
 select{font-size:.95rem}
+.row label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .filebtn{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700;border-radius:10px;border:2px dashed var(--accent);color:var(--accent);background:var(--chip);padding:12px;cursor:pointer}
 .filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .topoTxt .sub{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:2px 6px;font-size:12.5px;margin-top:2px;color:#f3e3c8}
@@ -51,7 +52,7 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);text-tran
 input,select,textarea{width:100%;font:inherit;font-weight:600;color:var(--fg);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:10px 12px;min-height:46px}
 input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;display:block;min-width:0}
 input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
-.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.row{display:flex;gap:10px;align-items:flex-end}.row>*{flex:1;min-width:0}
 .bt{display:block;width:100%;margin-top:14px;background:var(--accent);border:2px solid var(--accent);color:#fff;border-radius:10px;padding:14px;font:inherit;font-size:1.1rem;font-weight:700;cursor:pointer}
 .bt.sec{background:#fff;color:var(--accent)}
 .bt.sm{display:inline-block;width:auto;margin:0;padding:7px 12px;font-size:.88rem}
@@ -130,7 +131,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='3';
+const APP_VERSAO='4';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -271,18 +272,17 @@ function formMov(tipo,ed){
   const ehT=tipo==='TRANSF',ehM=tipo==='MORTE';
   $('#cx').innerHTML=`<div class="card">
     ${EDIT?`<div class="hint" style="margin:0 0 6px">✏️ Editando lançamento de ${fmtD(EDIT.data)}</div>`:''}<label>Data</label>${campoData('fData',EDIT?EDIT.data:hoje())}
-    <label>Quantidade</label><input type="number" inputmode="numeric" id="fQtd" value="${ehM?1:''}" ${ehM?'readonly':''}>
+    ${tipo==='ENTRADA'||tipo==='SAIDA'?`<label>Tipo de ${tipo==='ENTRADA'?'entrada':'saída'}</label><select id="fSub">${(tipo==='ENTRADA'?SUB_ENT:SUB_SAI).map(x=>`<option>${x}</option>`).join('')}</select>`:''}
     <label>${ehT?'Lote de origem':'Lote'}</label><select id="fLote">${optLotes()}</select>
     ${ehT?`<label>Lote de destino</label><select id="fDest">${optLotes()}</select>`:''}
     <label>Sexo</label><div class="seg" id="fSexo"><button data-s="M" class="on">Macho</button><button data-s="F">Fêmea</button></div>
+    <label>Quantidade</label><input type="number" inputmode="numeric" id="fQtd" value="${ehM?1:''}" ${ehM?'readonly':''}>
     ${ehM?`<label>Brinco do animal</label><input id="fBrinco" placeholder="Ex.: 20345 (vazio = sem brinco)">
       <label>Foto</label><label class="filebtn" style="text-transform:none;letter-spacing:0;font-size:1rem;margin:0">📷 Tirar ou escolher foto<input type="file" accept="image/*" id="fFoto"></label><img id="fPrev" class="foto" style="display:none">
       <label>Causa / observação</label><input id="fObs" placeholder="Ex.: caiu na vala, onça...">`:`
-    <label>Tipo de ${tipo==='ENTRADA'?'entrada':'saída'}</label><select id="fSub">${(tipo==='ENTRADA'?SUB_ENT:SUB_SAI).map(x=>`<option>${x}</option>`).join('')}</select>
-    <label>Peso total (kg) — opcional</label><input type="number" inputmode="decimal" id="fPeso">
-    <div class="row"><div><label>Valor por arroba (R$/@)</label><input type="number" inputmode="decimal" id="fArroba"></div>
+    <label>Peso total (kg)</label><input type="number" inputmode="decimal" id="fPeso">
+    <div class="row"><div><label>R$ por arroba</label><input type="number" inputmode="decimal" id="fArroba"></div>
     <div><label>Valor total (R$)</label><input type="number" inputmode="decimal" id="fValor"></div></div>
-    <label>Arroba</label><div class="seg" id="fDiv"><button data-d="30" class="on">@ = 30 kg vivo</button><button data-d="15">@ = 15 kg</button></div>
     <div class="mut" id="fMedio" style="margin-top:8px"></div>
     <label>Observação</label><input id="fObs" placeholder="${tipo==='ENTRADA'?'Ex.: desmama Centrão, compra fulano':'Ex.: venda JBS, foi para o Sítio'}">`}
     <button class="bt" onclick="salvarMov('${tipo}')">${EDIT?'Salvar alteração':'Registrar '+({ENTRADA:'entrada',SAIDA:'saída',MORTE:'morte',TRANSF:'transferência'})[tipo]}</button>${EDIT?`<button class="bt sec" onclick="formMov('${tipo}')">Cancelar edição</button>`:''}
@@ -291,20 +291,18 @@ function formMov(tipo,ed){
   ${tipo==='SAIDA'?'<div class="hint">Transferência entre arrendamentos tem botão próprio, e morte também (pede brinco e foto).</div>':''}
   <div class="card"><h3>Últimos lançamentos</h3><div id="ult"></div></div>`;
   $('#fSexo').onclick=e=>{if(!e.target.dataset.s)return;[...$('#fSexo').children].forEach(b=>b.classList.toggle('on',b===e.target))};
-  const div=()=>+($('#fDiv .on')||{dataset:{d:30}}).dataset.d;
+  const div=()=>30;
   const calc=(quem)=>{const q=+$('#fQtd').value,p=+$('#fPeso').value,arr=p?p/div():0;
     if(arr&&quem==='arroba'){const a=+$('#fArroba').value;$('#fValor').value=a?Math.round(a*arr*100)/100:''}
     else if(arr&&quem==='valor'){const v=+$('#fValor').value;$('#fArroba').value=v?Math.round(v/arr*100)/100:''}
     else if(arr&&+$('#fArroba').value){$('#fValor').value=Math.round(+$('#fArroba').value*arr*100)/100}
     const v=+$('#fValor').value;
     $('#fMedio').innerHTML=[q&&p?'Peso médio: <b>'+N(p/q)+' kg</b>':'',arr?'Arrobas: <b>'+N(arr)+' @</b>'+(q?' ('+N(arr/q)+' @/cab)':''):'',q&&v?'Valor por cabeça: <b>'+R$(v/q)+'</b>':'',p&&v?'R$/kg: <b>'+N(v/p)+'</b>':''].filter(Boolean).join(' · ')};
-  if(!ehM){$('#fQtd').oninput=()=>calc();$('#fPeso').oninput=()=>calc();$('#fArroba').oninput=()=>calc('arroba');$('#fValor').oninput=()=>calc('valor');
-    $('#fDiv').onclick=e=>{if(!e.target.dataset.d)return;[...$('#fDiv').children].forEach(b=>b.classList.toggle('on',b===e.target));calc()}}
+  if(!ehM){$('#fQtd').oninput=()=>calc();$('#fPeso').oninput=()=>calc();$('#fArroba').oninput=()=>calc('arroba');$('#fValor').oninput=()=>calc('valor');}
   else $('#fFoto').onchange=e=>reduzFoto(e.target.files[0]);
   if(EDIT){const e=EDIT,sv=(id,v)=>{const x=$('#'+id);if(x&&v!==undefined&&v!==null)x.value=v};
     sv('fQtd',e.qtd);sv('fLote',e.loteId);sv('fDest',e.loteDest);sv('fPeso',e.peso);sv('fArroba',e.precoArroba);sv('fValor',e.valor);sv('fBrinco',e.brinco);sv('fObs',e.obs);if(e.subtipo)sv('fSub',e.subtipo);else if($('#fSub')){$('#fSub').insertAdjacentHTML('afterbegin','<option value="">—</option>');$('#fSub').value=''}
     [...$('#fSexo').children].forEach(b=>b.classList.toggle('on',b.dataset.s===(e.sexo||'M')));
-    if($('#fDiv')&&e.divArroba)[...$('#fDiv').children].forEach(b=>b.classList.toggle('on',+b.dataset.d===+e.divArroba));
     if(e.foto){fotoTmp=e.foto;$('#fPrev').src=e.foto;$('#fPrev').style.display=''}
     if(!ehM)calc();scrollTo(0,0)}
   listaMov($('#ult'),DB.movs.filter(m=>m.tipo===tipo).slice(-5).reverse());
@@ -312,7 +310,7 @@ function formMov(tipo,ed){
 function reduzFoto(f){if(!f)return;const r=new FileReader();r.onload=ev=>{const im=new Image();im.onload=()=>{const k=Math.min(1,800/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);fotoTmp=c.toDataURL('image/jpeg',.7);$('#fPrev').src=fotoTmp;$('#fPrev').style.display=''};im.src=ev.target.result};r.readAsDataURL(f)}
 function salvarMov(tipo){
   const m={id:EDIT?EDIT.id:nid('M'),criadoEm:EDIT?EDIT.criadoEm:undefined,tipo,data:$('#fData').value,loteId:$('#fLote').value,qtd:+$('#fQtd').value,sexo:$('#fSexo .on').dataset.s,
-    peso:$('#fPeso')?+$('#fPeso').value||'':'',valor:$('#fValor')?+$('#fValor').value||'':'',subtipo:$('#fSub')?$('#fSub').value:'',precoArroba:$('#fArroba')?+$('#fArroba').value||'':'',divArroba:$('#fDiv')?+$('#fDiv .on').dataset.d:'',brinco:$('#fBrinco')?$('#fBrinco').value.trim():'',foto:fotoTmp,obs:$('#fObs').value.trim()};
+    peso:$('#fPeso')?+$('#fPeso').value||'':'',valor:$('#fValor')?+$('#fValor').value||'':'',subtipo:$('#fSub')?$('#fSub').value:'',precoArroba:$('#fArroba')?+$('#fArroba').value||'':'',divArroba:$('#fArroba')?30:'',brinco:$('#fBrinco')?$('#fBrinco').value.trim():'',foto:fotoTmp,obs:$('#fObs').value.trim()};
   if(tipo==='TRANSF')m.loteDest=$('#fDest').value;
   if(!m.data||!m.qtd||m.qtd<1)return toast('Informe data e quantidade');
   if(tipo==='TRANSF'&&m.loteDest===m.loteId)return toast('Origem e destino iguais');

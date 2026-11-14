@@ -148,7 +148,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='11';
+const APP_VERSAO='12';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -199,13 +199,13 @@ const R$=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const N=v=>(+v||0).toLocaleString('pt-BR',{maximumFractionDigits:2});
 const arrDe=id=>DB.arr.find(a=>a.id===id)||{};
 const loteDe=id=>DB.lotes.find(l=>l.id===id)||{};
-const CATS=['Bezerros machos','Garrotes','Bois','Bezerras fêmeas','Novilhas','Vacas'];
-const catLote=l=>{if(!l)return'';if(l.categoria)return l.categoria;const n=(l.nome||'').toUpperCase();
-  return /VACA/.test(n)?'Vacas':/BEZERRA/.test(n)?'Bezerras fêmeas':/BEZERRO/.test(n)?'Bezerros machos':/NOVILHA/.test(n)?'Novilhas':/GARROTE/.test(n)?'Garrotes':/\bBOI/.test(n)?'Bois':''};
+const CATS=['BEZERROS MACHOS','GARROTES','BOIS','BEZERRAS FÊMEAS','NOVILHAS','VACAS'];
+const catLote=l=>{if(!l)return'';if(l.categoria)return String(l.categoria).toUpperCase();const n=(l.nome||'').toUpperCase();
+  return /VACA/.test(n)?'VACAS':/BEZERRA/.test(n)?'BEZERRAS FÊMEAS':/BEZERRO/.test(n)?'BEZERROS MACHOS':/NOVILHA/.test(n)?'NOVILHAS':/GARROTE/.test(n)?'GARROTES':/\bBOI/.test(n)?'BOIS':''};
 const sexoLote=l=>{const c=catLote(l);return c?(CATS.indexOf(c)>=3?'F':'M'):''};
 const sufLote=l=>{const a=(arrDe(l.arrId).nome||'');let n=(l.nome||'').trim();if(a&&n.toUpperCase().startsWith(a.toUpperCase()))n=n.slice(a.length).replace(/^\s*-\s*/,'');return n};
 const rotLote=(l,cab)=>{if(!l||!l.id)return'—';const c=catLote(l);let meio=c||sufLote(l)||'sem categoria';
-  if(c&&DB.lotes.some(o=>o.id!==l.id&&o.arrId===l.arrId&&o.prop===l.prop&&catLote(o)===c))meio+=` (${sufLote(l)})`;
+  if(c&&DB.lotes.some(o=>o.id!==l.id&&o.arrId===l.arrId&&o.prop===l.prop&&catLote(o)===c)){const sf=sufLote(l),x=sf&&sf.toUpperCase()!==c?sf:(l.obs||'');if(x)meio+=` (${x})`}
   return `${arrDe(l.arrId).nome||'?'} - ${meio} - ${l.prop}`+(cab?` - ${saldo(l.id)} cab`:'')};
 const nomeLote=id=>rotLote(loteDe(id));
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
@@ -251,7 +251,7 @@ document.addEventListener('change',e=>{const i=e.target;if(i.tagName==='SELECT'&
 
 /* ===================== NAVEGAÇÃO ===================== */
 const TELAS={menu,estoque,entrada:()=>formMov('ENTRADA'),saida:()=>formMov('SAIDA'),morte:()=>formMov('MORTE'),transf:()=>formMov('TRANSF'),despesas,faturas,historico,gestao,arrend:telaLocais,lotes:telaLocais};
-const TITULOS={menu:'Parcerias',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',arrend:'Local e Lotes',lotes:'Local e Lotes'};
+const TITULOS={menu:'Parcerias',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',arrend:'Locais e Lotes',lotes:'Locais e Lotes'};
 let TELA='menu';
 const ICONES={estoque:'🐂',entrada:'⬇️',saida:'⬆️',morte:'✝️',transf:'🔁',despesas:'💲',faturas:'🧾',historico:'📋',gestao:'⚙️',arrend:'<span style="display:inline-flex;align-items:flex-end;gap:1px;line-height:1"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:1em;height:1em"><path d="M4 21V7.5L5.5 5 7 7.5V21M10.5 21V7.5L12 5l1.5 2.5V21M17 21V7.5L18.5 5 20 7.5V21" fill="#c9a26b" stroke="#7a4f21" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.5 10.5h19M2.5 16h19" stroke="#7a4f21" stroke-width="2.2" stroke-linecap="round"/></svg>🐂</span>',lotes:'🏷️'};
 const CORES={estoque:'#6d4321',entrada:'#2e8b3d',saida:'#c62828',morte:'#5f6b73',transf:'#7b3fa0',despesas:'#2c4f7c',faturas:'#3f80c4',historico:'#2f8fa8',arrend:'#ae8a63',lotes:'#b0782a',gestao:'#11253d'};
@@ -266,7 +266,7 @@ function menu(){
   $('#app').innerHTML=`
   <div class="kpis"><div class="kpi"><b>${DB.arr.filter(a=>a.ativo).length}</b><span>locais</span></div><div class="kpi"><b>${lotes.length}</b><span>lotes</span></div><div class="kpi"><b>${N(tot)}</b><span>cabeças</span></div></div>
   <div class="tiles">
-    ${tile('arrend','Local e Lotes',1)}
+    ${tile('arrend','Locais e Lotes',1)}
     ${tile('entrada','Entrada')}${tile('saida','Saídas/Transf')}
     ${tile('morte','Morte')}${tile('historico','Movimentações')}
     ${tile('despesas')}${tile('faturas')}
@@ -501,12 +501,12 @@ function telaLocais(){setTimeout(syncSels);
    <button class="bt sec" id="lInat" hidden style="border-color:var(--err);color:var(--err)" onclick="inatLote()"></button></div>
   <div class="card fBox" id="llFil" ${FL.inat?'hidden':''}>${filtroSel('flLoc','Local',[['','Todos'],...DB.arr.filter(a=>a.ativo).map(a=>[a.id,a.nome])],FL.loc)}
    ${filtroSel('flProp','Proprietário',[['','Todos'],...DB.props.map(p=>[p,p])],FL.prop)}
-   <div id="llRes" class="mut" style="margin-top:10px"></div></div>
+   <div id="llRes" class="mut" style="margin-top:10px;text-align:center"></div></div>
   <div id="llLst"></div>`;
   $('#flLoc').onchange=e=>{FL.loc=e.target.value;telaLocais();syncSels()};$('#flProp').onchange=e=>{FL.prop=e.target.value;telaLocais();syncSels()};
   const vis=DB.arr.filter(a=>!FL.loc||a.id===FL.loc||FL.inat),porP={};let totG=0;
   DB.lotes.filter(l=>l.ativo&&(!FL.loc||l.arrId===FL.loc)&&(!FL.prop||l.prop===FL.prop)).forEach(l=>{const c=saldo(l.id);porP[l.prop]=(porP[l.prop]||0)+c;totG+=c});
-  $('#llRes').innerHTML=`<b style="color:var(--fg);font-size:1.05rem">${N(totG)} cabeças</b>`;
+  $('#llRes').innerHTML=`<b style="color:var(--fg);font-size:1.05rem">Total ${N(totG)} cab</b>`;
   $('#llLst').innerHTML=vis.map(a=>{const ls=DB.lotes.filter(l=>l.arrId===a.id&&(!FL.prop||l.prop===FL.prop)&&(FL.inat?(!a.ativo||!l.ativo):l.ativo));
     if(FL.inat?(a.ativo&&!ls.length):!a.ativo)return'';if(!FL.inat&&FL.prop&&!ls.length)return'';const cab=ls.filter(l=>l.ativo).reduce((s,l)=>s+saldo(l.id),0);
     return `<div class="card">

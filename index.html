@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='36';
+const APP_VERSAO='37';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -518,7 +518,7 @@ function ajustarValor(arrId,ym,tp,calc){const a=arrDe(arrId),aj=ajDe(arrId,ym,tp
   if(aj)m.querySelector('#ajR').onclick=()=>{del('ajus',aj.id);m.remove();toast('Voltou ao valor calculado');go(TELA)};
   m.querySelector('#ajS').onclick=()=>{const v=r2(mv('ajV'));put('ajus',{id:`AJ_${tp}_${arrId}_${ym}`,arrId,ref:ym,tipo:tp,valor:v,obs:$('#ajO').value.trim()});m.remove();toast('Valor ajustado ✓');go(TELA)}}
 /* lança/atualiza sozinho em Despesas o que falta pagar de cada mês (último dia do mês) */
-function syncProvisoes(){const ms=DB.movs.map(m=>m.data).filter(Boolean).sort();if(!ms.length)return;const ini=ms[0].slice(0,7)<INI_PAG?INI_PAG:ms[0].slice(0,7),fim=hoje().slice(0,7);
+function syncProvisoes(){const ms=DB.movs.map(m=>m.data).filter(Boolean).sort();if(!ms.length)return;const ini=ms[0].slice(0,7)<INI_PAG?INI_PAG:ms[0].slice(0,7);let fim=hoje().slice(0,7);if(fim<INI_PAG)fim=INI_PAG;
   const quer=new Map();let ym=ini;let g=0;
   while(ym<=fim&&g++<240){const F=calcFatura(ym),[Y,M]=ym.split('-').map(Number),ult=ym+'-'+String(new Date(Y,M,0).getDate()).padStart(2,'0'),rf=ym.slice(5)+'/'+ym.slice(0,4);
     DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length&&!DB.ajus.some(x=>x.arrId===a.id&&x.ref===ym))return;
@@ -562,7 +562,8 @@ function salvarDesp(){const v=mv('dV');if(!$('#dT').value)return toast('Selecion
 function editarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;abrirDesp();$('#dForm h3').textContent='Editar despesa';const i=$('#dD');i.value=d.data;syncData(i);$('#dT').value=d.tipo;$('#dA').value=d.arrId;$('#dA').onchange();$('#dL').value=d.loteId||'';$('#dDs').value=d.desc||'';smv('dV',d.valor);$('#dS').value=d.status;$('#dId').value=d.id;$('#dPgBox').innerHTML=campoPagador('d',d.pagador,d.conta);syncSels();scrollTo(0,0)}
 function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value,pp=$('#dfP').value;DSF={p:pp,m:ym,s};
   const daProp=d=>!pp||(d.loteId?loteDe(d.loteId).prop===pp:DB.lotes.some(l=>l.arrId===d.arrId&&l.prop===pp));
-  const ds=DB.desp.filter(d=>(!ym||d.data.startsWith(ym))&&(!s||d.status===s)&&daProp(d)).sort((a,b)=>b.data.localeCompare(a.data));
+  const refYm=d=>d.ref&&/^\d\d\/\d{4}$/.test(d.ref)?d.ref.slice(3)+'-'+d.ref.slice(0,2):'';
+  const ds=DB.desp.filter(d=>(!ym||d.data.startsWith(ym)||refYm(d)===ym)&&(!s||d.status===s)&&daProp(d)).sort((a,b)=>b.data.localeCompare(a.data));
   const tot=ds.reduce((a,d)=>a+d.valor,0),ap=ds.filter(d=>d.status==='A PAGAR').reduce((a,d)=>a+d.valor,0);
   $('#dLst').innerHTML=(ds.map(d=>`<div class="list-it"><div><b>${R$(d.valor)}</b> · ${fmtD(d.data)} <span class="tag ${d.status==='PAGO'?'E':'M'}">${d.status}</span><br><span class="mut">${d.tipo==='ARRENDAMENTO'?'PARCERIA':d.tipo} · ${arrDe(d.arrId).nome||''}${d.status==='PAGO'?' · pago '+(d.pagoEm?fmtD(d.pagoEm)+' ':'')+'por '+(d.pagador||PAG0)+(d.conta?' ('+d.conta+')':''):''}${d.loteId?' · '+loteDe(d.loteId).nome:''}${d.desc?' · '+d.desc:''}</span></div>
   <div class="acoes">${acoesDesp(d)}</div></div>`).join('')||'<p class="mut">Nenhuma despesa no filtro.</p>')

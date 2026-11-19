@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='39';
+const APP_VERSAO='40';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -828,52 +828,20 @@ function gestao(){
    <p class="mut">Pendentes de envio: <b>${FILA.length}</b>${DB.planilha?` · <a href="${DB.planilha}" target="_blank">abrir planilha</a>`:''}</p>
    ${api()&&DB.servidorVazio?'<div class="hint">A planilha está vazia. Envie os parceiros, lotes e saldos iniciais para ela:</div><button class="bt" onclick="enviarTudo();gestao()">Enviar dados iniciais para a planilha</button>':''}
    <button class="bt sec" onclick="carregar();toast('Sincronizando...')">Sincronizar agora</button></div>
-  <div class="card"><h3>💾 Backup</h3>
-   <p class="mut" style="margin:0 0 8px"><b>Automático:</b> todo dia às 2h da manhã, no Google Drive (pasta FJK - GESTAO DE PARCERIAS). Ficam os 20 mais novos.<br>
-   <b>Manual:</b> no botão abaixo. Ficam os 20 mais novos.<br>Cada backup guarda a cópia do banco de dados (planilha com todas as abas, usada para restaurar) e os códigos do sistema.</p>
-   ${bkInfo()}
-   <div class="row" style="margin-top:8px"><button class="bt verde" id="bkBt" onclick="bkAgora()">✋ Backup manual agora</button><button class="bt sec" onclick="bkRestaurar()">↩ Restaurar cópia</button></div></div>
-  <div class="card"><h3>Cópias guardadas</h3><div id="bkLista"><p class="mut">Buscando…</p></div></div>`;
-  bkLista();
+  <div class="card"><h3>Backup</h3>
+   <p class="mut">Salva o banco de dados e os códigos do sistema na pasta <b>FJK - GESTAO DE PARCERIAS</b> do Google Drive. O automático é feito todo dia às 2h. Ficam guardados os 20 mais recentes de cada (manual e automático).</p>
+   <button class="bt verde" id="btBackup" onclick="fazerBackup()">☁️ Fazer backup agora</button></div>`;
   $('#gP').innerHTML=DB.props.map(p=>`<div class="list-it" style="display:block"><div style="display:flex;justify-content:space-between;align-items:center"><b>${p}</b><span class="mut">${DB.lotes.filter(l=>l.prop===p&&l.ativo).reduce((s,l)=>s+saldo(l.id),0)} cab</span></div>
    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${DB.contas.filter(c=>c.prop===p).map(c=>`<span class="tag" style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px">${esc(c.nome)}<a style="color:var(--err);font-weight:800;cursor:pointer" onclick="delConta('${c.id}')">✕</a></span>`).join('')}
    <button class="bt sm" style="margin:0;height:30px;padding:0 10px;width:auto" onclick="addConta('${p}')">+ Conta</button></div></div>`).join('');
 }
-/* ===== Backup (mesmo esquema do Gestão de Tratos) ===== */
-function bkInfo(){let u='',pd=false;try{u=localStorage.getItem(LS+'_bkUlt')||'';pd=localStorage.getItem(LS+'_bkPend')==='1'}catch(e){}
-  return u||pd?`<p class="mut" style="margin:0">${u?'Último backup manual feito por este celular: '+esc(u)+'.':''}${pd?' Tem backup esperando sinal de internet.':''}</p>`:''}
-let fazendoBk=false;
-async function bkAgora(){if(fazendoBk)return;
-  if(!navigator.onLine){try{localStorage.setItem(LS+'_bkPend','1')}catch(e){}toast('Sem sinal. O backup é feito quando tiver internet.');if(TELA==='gestao')gestao();return}
-  fazendoBk=true;const b=$('#bkBt');if(b){b.disabled=true;b.textContent='Fazendo backup…'}
-  try{await enviar();const j=await (await fetch(api(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({acao:'backup',manual:true})})).json();
-    if(!j.ok)throw new Error(j.erroBanco||j.erroCodigo||j.erro||'erro');
-    try{localStorage.removeItem(LS+'_bkPend');localStorage.setItem(LS+'_bkUlt',new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))}catch(e){}
-    toast('Backup feito ✓')}
-  catch(e){try{localStorage.setItem(LS+'_bkPend','1')}catch(x){}toast('Não consegui fazer o backup: '+(e.message||e))}
-  fazendoBk=false;if(TELA==='gestao')gestao()}
-window.addEventListener('online',()=>{try{if(localStorage.getItem(LS+'_bkPend')==='1')bkAgora()}catch(e){}});
-async function bkBusca(){const j=await (await fetch(api()+'?acao=backups&t='+Date.now(),{cache:'no-store'})).json();if(!j.ok)throw new Error(j.erro||'erro');return (j.backups||[]).filter(b=>b.banco)}
-const bkMan=b=>b.tipo?b.tipo==='manual':/manual/i.test(b.nome||'');
-const bkData=b=>{const d=new Date(b.criado);return d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'})+' · '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
-async function bkLista(){const el=$('#bkLista');if(!el)return;if(!navigator.onLine){el.innerHTML='<p class="mut">Precisa de internet para ver as cópias.</p>';return}
-  try{const L=await bkBusca(),au=L.filter(b=>!bkMan(b)),ma=L.filter(bkMan);
-    const li=b=>`<div class="list-it"><b>${bkData(b)}</b>${b.banco?`<a href="${esc(b.banco)}" target="_blank" rel="noopener">abrir planilha</a>`:''}</div>`;
-    if(!$('#bkLista'))return;$('#bkLista').innerHTML=`<p style="margin:4px 0"><b>🕑 Automáticos · ${au.length} de 20</b></p>${au.map(li).join('')||'<p class="mut">Nenhum ainda.</p>'}
-      <p style="margin:10px 0 4px"><b>✋ Manuais · ${ma.length} de 20</b></p>${ma.map(li).join('')||'<p class="mut">Nenhum ainda.</p>'}`}
-  catch(e){if($('#bkLista'))$('#bkLista').innerHTML='<p class="mut">Não consegui buscar as cópias agora.</p>'}}
-async function bkRestaurar(){if(!navigator.onLine)return toast('Precisa de internet para restaurar');
-  const sn=prompt('Digite a senha para restaurar uma cópia:');if(sn==null)return;if(sn.trim()!=='1010')return toast('Senha incorreta');
-  const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left;max-height:80vh;overflow:auto"><h3 style="margin-top:0">Escolha a cópia</h3><div id="bkEsc"><p class="mut">Buscando as cópias…</p></div><button class="bt sec" id="bkX" style="margin-top:10px">Cancelar</button></div>`;
-  document.body.appendChild(m);m.querySelector('#bkX').onclick=()=>m.remove();
-  try{const L=await bkBusca(),bt=b=>`<button class="bt sec" style="margin:6px 0;text-align:left" data-bk="${esc(b.banco)}" data-rot="${esc(bkData(b))}">${bkData(b)}<br><small class="mut">${bkMan(b)?'backup manual':'backup automático'}</small></button>`,au=L.filter(b=>!bkMan(b)),ma=L.filter(bkMan);
-    m.querySelector('#bkEsc').innerHTML=L.length?(au.length?'<p><b>🕑 Automáticos</b></p>'+au.map(bt).join(''):'')+(ma.length?'<p><b>✋ Manuais</b></p>'+ma.map(bt).join(''):''):'<p class="mut">Nenhuma cópia encontrada ainda.</p>';
-    m.querySelectorAll('[data-bk]').forEach(x=>x.onclick=()=>confirmar(`Restaurar a cópia de ${x.dataset.rot}?<br><br>O que estiver faltando volta para a planilha (inclusive o que foi apagado depois). Nada é apagado.`,async()=>{
-      m.querySelector('#bkEsc').innerHTML='<p class="mut">Restaurando…</p>';
-      try{const j=await (await fetch(api(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({acao:'restaurar',banco:x.dataset.bk,senha:sn.trim()})})).json();
-        if(!j.ok)throw new Error(j.erro||'erro');m.remove();toast(j.restaurados?j.restaurados+' registro(s) recuperado(s)':'Nada faltando: a planilha já tem tudo dessa cópia');if(j.restaurados)carregar()}
-      catch(e){m.remove();toast('Não consegui restaurar: '+(e.message||e))}}))}
-  catch(e){m.querySelector('#bkEsc').innerHTML='<p class="mut">Não consegui buscar as cópias. Tente de novo.</p>'}}
+async function fazerBackup(){const bt=$('#btBackup');
+  if(!navigator.onLine)return toast('Sem internet. Tente de novo quando tiver sinal.');
+  if(bt){bt.disabled=true;bt.textContent='Fazendo backup… (pode levar 1 minuto)'}
+  try{const j=await (await fetch(api(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({acao:'backup'})})).json();
+    toast(j&&j.ok?'Backup feito: banco de dados e códigos':'Backup com problema: '+((j&&(j.erroBanco||j.erroCodigo||j.erro))||'erro'));
+  }catch(e){toast('Não consegui fazer o backup: '+(e.message||e))}
+  if(bt&&bt.isConnected){bt.disabled=false;bt.textContent='☁️ Fazer backup agora'}}
 function addProp(){const p=$('#nP').value.trim().toUpperCase();if(!p||DB.props.includes(p))return toast('Informe um nome novo');put('props',{id:p,nome:p});gestao()}
 
 try{if(/[?&]menu=1/.test(location.search))localStorage.setItem('fjkMenu','1');if(localStorage.getItem('fjkMenu')==='1')$('#btnMenuFJK').hidden=false}catch(e){}

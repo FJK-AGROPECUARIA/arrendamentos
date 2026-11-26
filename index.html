@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='40';
+const APP_VERSAO='41';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -447,13 +447,13 @@ function historico(){
    Animal que já estava no lote no início do mês = 30 dias (mês fechado).
    Entrou no dia D  → conta (último dia do mês − D) dias. Ex.: dia 10 → 20 dias (mês de 30) ou 21 (mês de 31).
    Saiu/morreu/transferiu no dia D → desconta (último dia − D) dias, ou seja, cobra até o dia da saída. */
-function calcFatura(ym){
+function calcFatura(ym,ate){
   const [Y,M]=ym.split('-').map(Number);const ult=new Date(Y,M,0).getDate();
   const ini=ym+'-01',fim=ym+'-'+String(ult).padStart(2,'0');
   const antes=new Date(Y,M-1,0);const diaAntes=antes.getFullYear()+'-'+String(antes.getMonth()+1).padStart(2,'0')+'-'+String(antes.getDate()).padStart(2,'0');
   return DB.lotes.map(l=>{
     const cabIni=saldo(l.id,diaAntes);let cd=cabIni*30,ent=0,sai=0;
-    DB.movs.filter(m=>m.data>=ini&&m.data<=fim).forEach(m=>{const e=efeito(m,l.id);if(!e)return;const d=+m.data.slice(8);
+    DB.movs.filter(m=>m.data>=ini&&m.data<=fim&&(!ate||m.data<ate)).forEach(m=>{const e=efeito(m,l.id);if(!e)return;const d=+m.data.slice(8);
       cd+=e*(ult-d);if(e>0)ent+=e;else sai+=-e});
     const cabFim=cabIni+ent-sai;const valor=cd*(l.valorCab||0)/30;
     return {l,cabIni,ent,sai,cabFim,cd,valor,salario:cd>0?(l.salario||0):0};
@@ -465,7 +465,7 @@ function faturas(){syncProvisoes();
   $('#cx').innerHTML=`<div class="card fBox">${filtroMes('fM','Mês',FAT.ym||ym0)}${filtroSel('fA','Parceiro',[['','Todos'],...DB.arr.filter(a=>a.ativo).map(a=>[a.id,a.nome])],FAT.arr||'')}</div><div id="fR"></div>
   <div class="hint"><b>Como calcula:</b> valor por cabeça ÷ 30 × dias. Mês fechado = 30 dias. Entrou dia 10 → 20 dias (mês de 30) ou 21 (mês de 31). Saída, morte e transferência cobram até o dia em que saiu.</div>`;
   const r=()=>{const ym=$('#fM').value;if(!ym)return;const fa=$('#fA').value;FAT.ym=ym;FAT.arr=fa;
-    if(quitado(ym)){$('#fR').innerHTML='<div class="card mut" style="text-align:center">Até 11/2026 está tudo quitado (lançado na planilha anterior).<br>As faturas começam em <b>12/2026</b>.</div>';return}const F=calcFatura(ym);let html='',tg=0,ts=0;
+    if(quitado(ym)){$('#fR').innerHTML='<div class="card mut" style="text-align:center">Até 10/2026 está tudo quitado (lançado na planilha anterior).<br>As faturas começam em <b>11/2026</b>.</div>';return}const F=calcFatura(ym);let html='',tg=0,ts=0;
     DB.arr.filter(a=>!fa||a.id===fa).forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length)return;let ta=0,sa=0;
       const rows=fs.map(x=>{ta+=x.valor;sa+=x.salario;return `<tr><td>${catLote(x.l)||x.l.nome}<br><span class="mut">${x.l.prop} · ${R$(x.l.valorCab)}/cab</span></td><td class="n">${x.cabIni}</td><td class="n">${x.ent?'+'+x.ent:''}${x.sai?' −'+x.sai:''}</td><td class="n">${N(x.cd/30)}</td><td class="n"><b>${R$(x.valor)}</b></td></tr>`}).join('');
       const taC=ta,saC=sa,ajP=ajDe(a.id,ym,'P'),ajS=ajDe(a.id,ym,'S');if(ajP)ta=+ajP.valor;if(ajS)sa=+ajS.valor;
@@ -475,18 +475,28 @@ function faturas(){syncProvisoes();
 
 
       </table></div>${pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS)}</div>`});
-    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Aluguéis</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pp=DB.pags.filter(p=>p.ref===ym&&(!fa||p.arrId===fa)),q=quitado(ym),pg=q?r2(tg):somaP(pp.filter(p=>!ehSal(p))),sg=q?r2(ts):somaP(pp.filter(ehSal));return `<tr><td>Aluguéis pagos</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Aluguéis à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>${ts?`<tr><td>Salários pagos</td><td class="n" style="color:var(--ok)">${R$(sg)}</td></tr><tr><td><b>Salários à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(ts)-sg,0))}</b></td></tr>`:''}`})()}</table></div>`};
+    $('#fR').innerHTML=(html||'<div class="card mut">Nenhum animal no mês.</div>')+`<div class="card"><table><tr><td>Aluguéis</td><td class="n">${R$(tg)}</td></tr><tr><td>Salários</td><td class="n">${R$(ts)}</td></tr><tr class="tot"><td>Total do mês</td><td class="n">${R$(tg+ts)}</td></tr>${(()=>{const pp=DB.pags.filter(p=>p.ref===ym&&(!fa||p.arrId===fa)),q=quitado(ym),bqs=tp=>DB.arr.filter(a=>!fa||a.id===fa).reduce((s,a)=>s+baseQ(a.id,ym,tp),0),pg=q?r2(tg):r2(somaP(pp.filter(p=>!ehSal(p)))+bqs('P')),sg=q?r2(ts):r2(somaP(pp.filter(ehSal))+bqs('S'));return `<tr><td>Aluguéis pagos</td><td class="n" style="color:var(--ok)">${R$(pg)}</td></tr><tr><td><b>Aluguéis à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(tg)-pg,0))}</b></td></tr>${ts?`<tr><td>Salários pagos</td><td class="n" style="color:var(--ok)">${R$(sg)}</td></tr><tr><td><b>Salários à pagar</b></td><td class="n" style="color:var(--err)"><b>${R$(Math.max(r2(ts)-sg,0))}</b></td></tr>`:''}`})()}</table></div>`};
   $('#fM').onchange=r;$('#fA').onchange=r;r();
 }
 const r2=v=>Math.round((+v||0)*100)/100;
 const ehSal=p=>String(p.id).startsWith('PS_');const somaP=ps=>r2(ps.reduce((s,p)=>s+(+p.valor||0),0));
 const pagosDe=(arrId,ym,tp)=>DB.pags.filter(p=>p.arrId===arrId&&p.ref===ym&&(!tp||(tp==='S')===ehSal(p)));
-const INI_PAG='2026-12';const quitado=ym=>ym<INI_PAG;
+const INI_PAG='2026-11';const quitado=ym=>ym<INI_PAG;
+/* 11/2026: quitado na planilha anterior o gado lançado até 24/11 (exceto parceiros em aberto, que pagam o mês completo).
+   Gado que entrou a partir de 25/11 gera fatura complementar (residual até o fim do mês). */
+const QUIT={ym:'2026-11',corte:'2026-11-25',abertos:['ORLANDO']};
+const semAc=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+const temQuit=(arrId,ym)=>ym===QUIT.ym&&!QUIT.abertos.some(n=>semAc(arrDe(arrId).nome).includes(n));
+
+function baseLotes(arrId,ym){if(!temQuit(arrId,ym))return null;return calcFatura(ym,QUIT.corte).filter(x=>x.l.arrId===arrId)}
+function baseQ(arrId,ym,tp){const b=baseLotes(arrId,ym);if(!b)return 0;return r2(b.reduce((s,x)=>s+(tp==='S'?x.salario:x.valor),0))}
+const pagoQ=(arrId,ym,tp)=>r2(somaP(pagosDe(arrId,ym,tp))+baseQ(arrId,ym,tp));
+const fmtCorte=()=>{const d=new Date(QUIT.corte+'T12:00:00');d.setDate(d.getDate()-1);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')};
 function pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS){
-  const bloco=(nome,tot,tp,calc,aj)=>{if(quitado(ym))return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:var(--ok)">QUITADO</b></span><b style="color:var(--ok)">${R$(tot)}</b></div></div>`;const ps=pagosDe(a.id,ym,tp),pg=somaP(ps),pend=r2(r2(tot)-pg);
-    return `<div class="pgB ${pend>0.004?'pgPend':'pgOk'}"><div class="pgH"><span>${nome} - <b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${pend>0.004?'À PAGAR':'PAGO'}</b></span><b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${R$(pend>0.004?pend:pg)}</b></div>
-    ${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb del" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
-    ${pg&&pend>0.004?`<div class="pgL"><span class="mut">Pago</span><b style="color:var(--ok)">${R$(pg)}</b></div>`:''}
+  const bloco=(nome,tot,tp,calc,aj)=>{if(quitado(ym))return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:var(--ok)">QUITADO</b></span><b style="color:var(--ok)">${R$(tot)}</b></div></div>`;const ps=pagosDe(a.id,ym,tp),bq=baseQ(a.id,ym,tp),pg=r2(somaP(ps)+bq),pend=Math.max(r2(r2(tot)-pg),0);
+    return `<div class="pgB ${pend>0.004?'pgPend':'pgOk'}"><div class="pgH"><span>${nome} - <b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${pend>0.004?(bq?'COMPLEMENTAR À PAGAR':'À PAGAR'):(bq&&!ps.length?'QUITADO':'PAGO')}</b></span><b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${R$(pend>0.004?pend:pg)}</b></div>
+    ${bq?`<div class="pgL"><span class="mut">Quitado até ${fmtCorte()} (planilha anterior)</span><b style="color:var(--ok)">${R$(bq)}</b></div>${pend>0.004?`<div class="pgL"><span class="mut">Gado que entrou a partir de ${fmtCorte().replace(/^\d+/,d=>String(+d+1).padStart(2,'0'))} (até o fim do mês)</span><b style="color:var(--err)">${R$(pend)}</b></div>`:''}`:''}${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb del" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
+    ${somaP(ps)&&pend>0.004?`<div class="pgL"><span class="mut">Pago</span><b style="color:var(--ok)">${R$(somaP(ps))}</b></div>`:''}
     ${pend>0.004?`<div class="pgBt"><button class="bt sec" onclick="ajustarValor('${a.id}','${ym}','${tp}',${r2(calc)})">✏️ Editar${aj?' <small style="font-size:.72rem">(ajustado)</small>':''}</button>${pend>0.004?`<button class="bt verde" onclick="abrirPag('${a.id}','${ym}',${pend},'${tp}')">💵 Pagar</button>`:''}</div>`:''}</div>`};
   return (r2(ta)>0||pagosDe(a.id,ym,'P').length?bloco('Aluguel do mês',ta,'P',taC,ajP):'')+(r2(sa)>0||pagosDe(a.id,ym,'S').length?bloco('Salário do mês',sa,'S',saC,ajS):'')}
 function abrirPag(arrId,ym,pend,tp,ed){const sal=tp==='S';const a=arrDe(arrId);const contas=[...new Set(DB.pags.map(p=>p.conta).filter(Boolean))];
@@ -504,7 +514,7 @@ function abrirPag(arrId,ym,pend,tp,ed){const sal=tp==='S';const a=arrDe(arrId);c
     put('pags',{...(ed||{}),id:pid,arrId,ref:ym,data:dt,valor:v,conta,pagador,obs:ob,criadoEm:ed?ed.criadoEm:new Date().toISOString()});
     put('desp',{id:'D'+pid,data:dt,tipo:sal?'SALÁRIO':'ARRENDAMENTO',arrId,loteId:'',desc:(sal?'Pagamento salário ':'Pagamento aluguel ')+rf+' · '+conta+(ob?' · '+ob:''),valor:v,status:'PAGO',ref:rf,pagoEm:dt,conta,pagador});
     m.remove();toast(ed?'Pagamento alterado ✓':v<pend-0.004?'Pagamento parcial lançado':'Pago');go(TELA==='despesas'?'despesas':'faturas')}}
-function editPag(id){const p=DB.pags.find(x=>x.id===id);if(!p)return;const tp=ehSal(p)?'S':'P';const pend=r2(totMes(p.arrId,p.ref,tp)-somaP(pagosDe(p.arrId,p.ref,tp))+(+p.valor||0));abrirPag(p.arrId,p.ref,pend,tp,p)}
+function editPag(id){const p=DB.pags.find(x=>x.id===id);if(!p)return;const tp=ehSal(p)?'S':'P';const pend=r2(totMes(p.arrId,p.ref,tp)-pagoQ(p.arrId,p.ref,tp)+(+p.valor||0));abrirPag(p.arrId,p.ref,pend,tp,p)}
 const ajDe=(arrId,ym,tp)=>DB.ajus.find(x=>x.id===`AJ_${tp}_${arrId}_${ym}`);
 function totMes(arrId,ym,tp){const aj=ajDe(arrId,ym,tp);if(aj)return r2(+aj.valor);return r2(calcFatura(ym).filter(x=>x.l.arrId===arrId).reduce((s,x)=>s+(tp==='S'?x.salario:x.valor),0))}
 function ajustarValor(arrId,ym,tp,calc){const a=arrDe(arrId),aj=ajDe(arrId,ym,tp),nm=tp==='S'?'salário':'aluguel do mês';
@@ -522,8 +532,8 @@ function syncProvisoes(){const ms=DB.movs.map(m=>m.data).filter(Boolean).sort();
   const quer=new Map();let ym=ini;let g=0;
   while(ym<=fim&&g++<240){const F=calcFatura(ym),[Y,M]=ym.split('-').map(Number),ult=ym+'-'+String(new Date(Y,M,0).getDate()).padStart(2,'0'),rf=ym.slice(5)+'/'+ym.slice(0,4);
     DB.arr.forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length&&!DB.ajus.some(x=>x.arrId===a.id&&x.ref===ym))return;
-      ['P','S'].forEach(tp=>{const aj=ajDe(a.id,ym,tp),tot=aj?r2(+aj.valor):r2(fs.reduce((s,x)=>s+(tp==='S'?x.salario:x.valor),0)),pend=r2(tot-somaP(pagosDe(a.id,ym,tp)));
-        if(pend>0.004)quer.set(`DV${tp}_${a.id}_${ym}`,{data:ult,tipo:tp==='S'?'SALÁRIO':'ARRENDAMENTO',arrId:a.id,loteId:'',desc:(tp==='S'?'Salário ':'Aluguel ')+rf+' (a pagar)',valor:pend,status:'A PAGAR',ref:rf,pagador:PAG0,conta:CONTA0})})});
+      ['P','S'].forEach(tp=>{const aj=ajDe(a.id,ym,tp),tot=aj?r2(+aj.valor):r2(fs.reduce((s,x)=>s+(tp==='S'?x.salario:x.valor),0)),pend=r2(tot-pagoQ(a.id,ym,tp));
+        if(pend>0.004)quer.set(`DV${tp}_${a.id}_${ym}`,{data:ult,tipo:tp==='S'?'SALÁRIO':'ARRENDAMENTO',arrId:a.id,loteId:'',desc:(tp==='S'?'Salário ':'Aluguel ')+rf+(baseQ(a.id,ym,tp)?' complementar':'')+' (a pagar)',valor:pend,status:'A PAGAR',ref:rf,pagador:PAG0,conta:CONTA0})})});
     ym=M===12?(Y+1)+'-01':Y+'-'+String(M+1).padStart(2,'0')}
   DB.desp.filter(d=>String(d.id).startsWith('DV')&&!quer.has(d.id)).map(d=>d.id).forEach(id=>del('desp',id));
   quer.forEach((v,id)=>{const o=DB.desp.find(d=>d.id===id);if(!o||o.valor!==v.valor||o.data!==v.data||o.status!==v.status||o.desc!==v.desc)put('desp',{...(o||{}),id,...v})})}
@@ -583,7 +593,7 @@ function pagarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;const con
     d.status='PAGO';d.pagoEm=dt;d.pagador=pc.pagador;d.conta=pc.conta;put('desp',d);m.remove();listaDesp();toast('Pago ✓')}}
 
 /* ===================== PAGADOR / CONTAS / CAIXA ===================== */
-const PAG0='FJK',CONTA0='SICREDI KASSANDRA',INI_CX=INI_PAG+'-01';
+const PAG0='FJK',CONTA0='SICREDI KASSANDRA',INI_CX='2026-12-01';
 const CONTAS0=['SICREDI KASSANDRA','BB KASSANDRA','DINHEIRO'];
 const idConta=(p,n)=>('CT_'+p+'_'+n).toUpperCase().replace(/[^A-Z0-9_]+/g,'_');
 function garanteContas(){if(DB.contas.some(c=>c.prop===PAG0))return;CONTAS0.forEach(n=>put('contas',{id:idConta(PAG0,n),prop:PAG0,nome:n}))}
@@ -597,7 +607,7 @@ const lerPagador=pf=>({pagador:$('#'+pf+'Pg').value||PAG0,conta:$('#'+pf+'Ct').v
 /* de quem é cada despesa: lote → dono do lote; aluguel/salário → rateio pelos lotes do mês; resto → rateio pelas cabeças da parceria na data */
 function rateio(d){const v=r2(d.valor);if(d.loteId&&loteDe(d.loteId)&&loteDe(d.loteId).prop)return {[loteDe(d.loteId).prop]:v};
   let pesos={};const add=(p,w)=>{if(p&&w>0)pesos[p]=(pesos[p]||0)+w};
-  if((d.tipo==='ARRENDAMENTO'||d.tipo==='SALÁRIO')&&d.ref){const [M,Y]=String(d.ref).split('/');calcFatura(Y+'-'+M).filter(x=>x.l.arrId===d.arrId).forEach(x=>add(x.l.prop,d.tipo==='SALÁRIO'?x.salario:x.valor))}
+  if((d.tipo==='ARRENDAMENTO'||d.tipo==='SALÁRIO')&&d.ref){const [M,Y]=String(d.ref).split('/');{const ym=Y+'-'+M,b=baseLotes(d.arrId,ym),vv=x=>d.tipo==='SALÁRIO'?x.salario:x.valor;calcFatura(ym).filter(x=>x.l.arrId===d.arrId).forEach(x=>{const o=b&&b.find(y=>y.l.id===x.l.id);add(x.l.prop,b?vv(x)-(o?vv(o):0):vv(x))})}}
   if(!Object.keys(pesos).length)DB.lotes.filter(l=>l.arrId===d.arrId).forEach(l=>add(l.prop,saldo(l.id,d.data)));
   const ks=Object.keys(pesos);if(!ks.length)return {[PAG0]:v};const tot=ks.reduce((s,k)=>s+pesos[k],0);let rest=v;const o={};
   ks.forEach((k,i)=>{const x=i===ks.length-1?r2(rest):r2(v*pesos[k]/tot);o[k]=x;rest-=x});return o}

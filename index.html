@@ -64,6 +64,7 @@ body.naInicio .topo{padding-top:14px;padding-bottom:14px}body.naInicio .topoTxt 
 .cxTop .bt{font-size:.9rem;padding:8px 4px!important;border-radius:8px}
 .cxComp .gHoje{display:none}.cxComp .row{align-items:flex-start}
 #dForm:not([hidden]),#cxForm:not([hidden]){position:fixed;inset:0;z-index:60;margin:0;border-radius:0;overflow:auto;padding:max(16px,env(safe-area-inset-top,0px)) 16px 40px;box-shadow:none;background:#fff}
+.cxComp .gSeta{display:none!important}.cxComp .gDataBox{min-height:38px}.cxS b,.cxL b{white-space:nowrap}
 .tela>.barra{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;box-shadow:0 0 0 6px #fff,0 8px 12px -4px rgba(0,0,0,.22)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px 16px;margin-top:12px}
 .card h3{margin:0 0 10px;font-size:.95rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-left:5px solid var(--lima);padding-left:8px}
@@ -192,7 +193,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='58';
+const APP_VERSAO='59';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;

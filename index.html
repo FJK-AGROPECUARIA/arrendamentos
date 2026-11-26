@@ -175,7 +175,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='47';
+const APP_VERSAO='48';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -522,7 +522,7 @@ function abrirPag(arrId,ym,pend,tp,ed){const sal=tp==='S';const a=arrDe(arrId);c
   const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">${ed?'Editar pagamento':'Pagar'} ${sal?'salário':'aluguel'} · ${esc(a.nome)} · ${ym.slice(5)}/${ym.slice(0,4)}</h3>
   ${ed?`<p class="mut" style="margin:0 0 6px">Máximo: <b>${R$(pend)}</b></p>`:''}
   <label>Data</label>${campoData('pgD',ed?ed.data:hoje())}
-  ${ed?'':`<div class="row"><div><label>Valor a pagar (R$)</label><input id="pgAp" type="text" readonly tabindex="-1" value="${fmtMoeda(pend)}" style="font-weight:700;background:#ece5da;color:#3a2a1a;pointer-events:none"></div><div><label>Valor pago (R$)</label><input id="pgV" type="text" inputmode="numeric" class="moeda" value="${fmtMoeda(pend)}"></div></div>
+  ${ed?'':`<div class="row"><div><label>Valor a pagar (R$)</label><input id="pgAp" type="text" readonly tabindex="-1" value="${fmtMoeda(pend)}" style="font-weight:700;background:#ece5da;color:#3a2a1a;pointer-events:none"></div><div><label>Valor pago (R$)</label><input id="pgV" type="text" inputmode="numeric" class="moeda" value=""></div></div>
   <div class="row"><div><label>Desconto (R$)</label><input id="pgDs" type="text" inputmode="numeric" class="moeda" value=""></div><div><label>Valor residual (R$)</label><input id="pgRd" type="text" readonly tabindex="-1" value="" style="font-weight:700;background:#ece5da;pointer-events:none"></div></div>
   <p id="pgRs" style="margin:6px 0 0;font-weight:700"></p>`}${ed?`<label>Valor (R$)</label><input id="pgV" type="text" inputmode="numeric" class="moeda" value="${fmtMoeda(ed.valor)}">`:''}
   ${campoPagador('pg',ed&&ed.pagador,ed&&ed.conta)}
@@ -534,13 +534,13 @@ function abrirPag(arrId,ym,pend,tp,ed){const sal=tp==='S';const a=arrDe(arrId);c
     r.innerHTML=f>0.004?`<span style="color:var(--err)">Ao salvar, o residual de ${R$(f)} fica à pagar. Para quitar, coloque esse valor no desconto.</span>`:f<-0.004?`<span style="color:var(--err)">Valor pago + desconto passam do valor a pagar em ${R$(-f)}</span>`:`<span style="color:var(--ok)">Quita a fatura${ds?' (com desconto de '+R$(ds)+')':''}</span>`};
   if(!ed){m.querySelector('#pgDs').addEventListener('input',rsto);m.querySelector('#pgV').addEventListener('input',rsto);rsto()}
   if(ed)m.querySelector('#pgE').onclick=()=>{m.remove();delPag(ed.id)};
-  m.querySelector('#pgS').onclick=()=>{const v=r2(mv('pgV')),ds=ed?0:r2(mv('pgDs')),dt=$('#pgD').value;if(!dt)return toast('Informe a data');if(!(v>0))return toast('Informe o valor pago');
+  m.querySelector('#pgS').onclick=()=>{const v=r2(mv('pgV')),ds=ed?0:r2(mv('pgDs')),dt=$('#pgD').value;if(!dt)return toast('Informe a data');if(!(v>0)&&!(ds>0))return toast('Informe o valor pago');
     if(ds>pend+0.004)return toast('Desconto maior que o à pagar ('+R$(pend)+')');if(v+ds>pend+0.004)return toast('Desconto + valor pago maior que o à pagar ('+R$(pend)+')');const pc=lerPagador('pg');if(!pc.conta)return toast('Informe a conta de pagamento');
     const pid=ed?ed.id:(sal?nid('PS_'):nid('P')),conta=pc.conta,pagador=pc.pagador,ob=$('#pgO').value.trim(),rf=ym.slice(5)+'/'+ym.slice(0,4);
     if(ds>0){const aj=ajDe(arrId,ym,tp),tt=totMes(arrId,ym,tp),dAnt=aj&&/^Desconto/.test(aj.obs||'')?+(String(aj.obs).match(/[\d.]+,\d\d|[\d.]+/)||['0'])[0].replace(/\./g,'').replace(',','.')||0:0;
       put('ajus',{id:`AJ_${tp}_${arrId}_${ym}`,arrId,ref:ym,tipo:tp,valor:r2(tt-ds),obs:'Desconto '+fmtMoeda(r2(dAnt+ds))+(aj&&aj.obs&&!/^Desconto/.test(aj.obs)?' · '+aj.obs:'')})}
-    put('pags',{...(ed||{}),id:pid,arrId,ref:ym,data:dt,valor:v,conta,pagador,obs:ob,criadoEm:ed?ed.criadoEm:new Date().toISOString()});
-    put('desp',{id:'D'+pid,data:dt,tipo:sal?'SALÁRIO':'ARRENDAMENTO',arrId,loteId:'',desc:(sal?'Pagamento salário ':'Pagamento aluguel ')+rf+' · '+conta+(ob?' · '+ob:''),valor:v,status:'PAGO',ref:rf,pagoEm:dt,conta,pagador});
+    if(v>0){put('pags',{...(ed||{}),id:pid,arrId,ref:ym,data:dt,valor:v,conta,pagador,obs:ob,criadoEm:ed?ed.criadoEm:new Date().toISOString()});
+    put('desp',{id:'D'+pid,data:dt,tipo:sal?'SALÁRIO':'ARRENDAMENTO',arrId,loteId:'',desc:(sal?'Pagamento salário ':'Pagamento aluguel ')+rf+' · '+conta+(ob?' · '+ob:''),valor:v,status:'PAGO',ref:rf,pagoEm:dt,conta,pagador});}
     m.remove();toast(ed?'Pagamento alterado ✓':v+ds<pend-0.004?'Pagamento parcial lançado':ds?'Quitado com desconto ✓':'Pago');go(TELA==='despesas'?'despesas':'faturas')}}
 function editPag(id){const p=DB.pags.find(x=>x.id===id);if(!p)return;const tp=ehSal(p)?'S':'P';const pend=r2(totMes(p.arrId,p.ref,tp)-pagoQ(p.arrId,p.ref,tp)+(+p.valor||0));abrirPag(p.arrId,p.ref,pend,tp,p)}
 const ajDe=(arrId,ym,tp)=>DB.ajus.find(x=>x.id===`AJ_${tp}_${arrId}_${ym}`);

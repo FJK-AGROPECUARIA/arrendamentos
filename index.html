@@ -63,7 +63,7 @@ body.naInicio .topo{padding-top:14px;padding-bottom:14px}body.naInicio .topoTxt 
 .cxComp .expRow{margin-top:10px;gap:6px}.cxComp .expRow .bt{font-size:.8rem;padding:6px 4px;border-radius:8px}
 .cxTop .bt{font-size:.9rem;padding:8px 4px!important;border-radius:8px}
 .cxComp .gHoje{display:none}.cxComp .row{align-items:flex-start}
-#dForm:not([hidden]),#cxForm:not([hidden]){position:fixed;inset:0;z-index:60;margin:0;border-radius:0;overflow:auto;padding:max(16px,env(safe-area-inset-top,0px)) 16px 40px;box-shadow:none;background:#fff}
+#cx.fOn>*:not(#dForm):not(#cxForm){display:none!important}
 .cxComp .gSeta{display:none!important}.cxComp .gDataBox{min-height:38px}.cxS b,.cxL b{white-space:nowrap}
 .dIt{align-items:flex-start}.dTop{display:flex;align-items:center;gap:8px;margin-bottom:4px}.dVal{font-size:1.08rem}
 .dLn{display:flex;gap:6px;font-size:.84rem;line-height:1.35;color:var(--fg)}.dRt{flex:none;width:82px;color:#7a8590;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding-top:2px}
@@ -195,7 +195,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='61';
+const APP_VERSAO='62';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -597,12 +597,12 @@ function gerarDespesas(ym){
 
 /* ===================== DESPESAS ===================== */
 let DSF={};
-function abrirDesp(){$('#dForm').hidden=false;$('#dForm').scrollTop=0;VOLTA=()=>despesas()}
-function despesas(){syncProvisoes();
+function abrirDesp(){$('#dForm').hidden=false;$('#cx').classList.add('fOn');scrollTo(0,0);VOLTA=()=>despesas()}
+function despesas(){syncProvisoes();$('#cx').classList.remove('fOn');
   $('#cx').innerHTML=`<div class="row" id="dNova" style="margin-top:12px;grid-template-columns:1fr"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirDesp()">+ Despesa</button></div>
   <div class="card" id="dForm" hidden><h3>Nova despesa</h3>
   <label>Data</label>${campoData('dD',hoje())}
-  <label>Tipo</label><select id="dT"><option value="">SELECIONE</option><option value="ARRENDAMENTO">PARCERIA</option><option>SALÁRIO</option><option>COMPRA GADO</option><option>SAL MINERAL</option><option>VACINA/REMÉDIO</option><option>FRETE</option><option>OUTROS</option></select>
+  <label>Tipo</label><select id="dT"><option value="">SELECIONE</option><option value="ARRENDAMENTO">ALUGUEL</option><option>SALÁRIO</option><option>COMPRA GADO</option><option>SAL MINERAL</option><option>VACINA/REMÉDIO</option><option>FRETE</option><option>OUTROS</option></select>
   <label>Parceiro</label><select id="dA"><option value="">SELECIONE</option>${DB.arr.map(a=>`<option value="${a.id}">${a.nome} - ${a.cidade}</option>`).join('')}</select>
   <label>Lote (opcional)</label><select id="dL"></select>
   <label>Descrição</label><input id="dDs">
@@ -625,7 +625,7 @@ function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value,pp=$('#dfP').val
   const tot=ds.reduce((a,d)=>a+d.valor,0),ap=ds.filter(d=>d.status==='A PAGAR').reduce((a,d)=>a+d.valor,0);
   const li=(r,v)=>v?`<div class="dLn"><span class="dRt">${r}</span><span>${esc(v)}</span></div>`:'';
   $('#dLst').innerHTML=(ds.map(d=>{const lt=d.loteId?loteDe(d.loteId):null,pg=d.status==='PAGO';return `<div class="list-it dIt"><div style="flex:1;min-width:0"><div class="dTop"><b class="dVal">${R$(d.valor)}</b><span class="tag ${pg?'E':'M'}">${d.status}</span></div>
-  ${li('Tipo',d.tipo==='ARRENDAMENTO'?'PARCERIA':d.tipo)}${li('Parceiro',arrDe(d.arrId).nome||'')}${li('Lote',lt?(catLote(lt)||lt.nome)+' ('+lt.prop+')':'')}${li('Descrição',d.desc||'')}
+  ${li('Tipo',d.tipo==='ARRENDAMENTO'?'ALUGUEL':d.tipo)}${li('Parceiro',arrDe(d.arrId).nome||'')}${li('Lote',lt?(catLote(lt)||lt.nome)+' ('+lt.prop+')':'')}${li('Descrição',d.desc||'')}
   ${li(pg?'Pago em':'Vencimento',fmtD(pg?(d.pagoEm||d.data):d.data))}${pg?li('Pago por',(d.pagador||PAG0)+(d.conta?' · '+d.conta:'')):''}</div>
   <div class="acoes">${acoesDesp(d)}</div></div>`}).join('')||'<p class="mut">Nenhuma despesa no filtro.</p>')
   +`<table style="margin-top:8px"><tr class="tot"><td>Total</td><td class="n">${R$(tot)}</td></tr><tr><td>A pagar</td><td class="n" style="color:var(--err)">${R$(ap)}</td></tr></table>`}
@@ -635,7 +635,7 @@ function acoesDesp(d){const id=String(d.id);
   return `${d.status==='A PAGAR'?`<button class="bt sm" style="height:40px" onclick="pagarDesp('${d.id}')">Pagar</button>`:''}<button class="icb" title="Editar" onclick="editarDesp('${d.id}')">✏️</button><button class="icb del" title="Excluir" onclick="confirmar('Excluir esta despesa?',()=>{del('desp','${d.id}');listaDesp()})">✕</button>`}
 function pagarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;const contas=[...new Set([...DB.pags.map(p=>p.conta),...DB.desp.map(x=>x.conta)].filter(Boolean))];
   const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">Pagar despesa</h3>
-  <p class="mut" style="margin:0 0 6px">${esc(d.tipo==='ARRENDAMENTO'?'PARCERIA':d.tipo)} · ${esc(arrDe(d.arrId).nome||'')} · <b>${R$(d.valor)}</b></p>
+  <p class="mut" style="margin:0 0 6px">${esc(d.tipo==='ARRENDAMENTO'?'ALUGUEL':d.tipo)} · ${esc(arrDe(d.arrId).nome||'')} · <b>${R$(d.valor)}</b></p>
   <label>Data do pagamento</label>${campoData('pdD',hoje())}
   ${campoPagador('pd',d.pagador,d.conta)}
   <div class="btRow"><button class="bt verm" id="pdN">Cancelar</button><button class="bt verde" id="pdS">Salvar</button></div></div>`;
@@ -675,7 +675,7 @@ const rotSaldo=(v,p)=>v>0.004?`<b style="color:var(--ok)">FJK deve ${R$(v)} ${p?
 let CXF='',CXM='';
 const mesItem=x=>String(x.data||'').slice(0,7); /* conta sempre pela data do pagamento */
 const saldoAte=(p,ym)=>r2(extrato(p).filter(x=>mesItem(x)<=ym).reduce((s,x)=>s+x.v,0));
-function caixa(){const ps=DB.props.filter(p=>p!==PAG0);if(CXF&&!ps.includes(CXF))CXF='';if(!CXM){CXM=hoje().slice(0,7);if(CXM<INI_PAG)CXM=INI_PAG}
+function caixa(){$('#cx').classList.remove('fOn');const ps=DB.props.filter(p=>p!==PAG0);if(CXF&&!ps.includes(CXF))CXF='';if(!CXM){CXM=hoje().slice(0,7);if(CXM<INI_PAG)CXM=INI_PAG}
   $('#cx').innerHTML=`<div class="row cxTop" style="margin-top:10px"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','APORTE')">+ Saldo</button><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','ACERTO')">Acerto</button></div>
   <div class="card" id="cxForm" hidden></div>
   <div class="card fBox">${filtroMes('cxM','Mês',CXM)}${filtroSel('cxP','Proprietário',[['','Todos'],...ps.map(p=>[p,p])],CXF)}</div>
@@ -730,7 +730,7 @@ async function relExtrato(tp){const d=dadosExtrato();if(!d)return;const nome='FJ
     if(tp==='pdf')return await salvarOuEnviar([fzPdf([cv])],[nome+'.pdf'],'application/pdf');
     const b=await new Promise(k=>cv.toBlob(k,'image/png'));return await salvarOuEnviar([b],[nome+'.png'],'image/png')}catch(e){toast('Não consegui gerar o arquivo')}}
 function abrirCx(id,tp){const c=id?DB.caixa.find(x=>x.id===id):null;tp=c?c.tipo:tp;VOLTA=()=>caixa();const ps=DB.props.filter(p=>p!==PAG0);
-  const f=$('#cxForm');f.hidden=false;f.innerHTML=`<h3>${c?'Editar lançamento':(CXT[tp]||['Novo lançamento'])[0]}</h3>
+  const f=$('#cxForm');f.hidden=false;$('#cx').classList.add('fOn');f.innerHTML=`<h3>${c?'Editar lançamento':(CXT[tp]||['Novo lançamento'])[0]}</h3>
   <label>Data</label>${campoData('cxD',c?c.data:hoje())}
   <label>Proprietário</label><select id="cxPr"><option value="">SELECIONE</option>${ps.map(p=>`<option ${c&&c.prop===p||!c&&p===CXF?'selected':''}>${p}</option>`).join('')}</select>
   <label>Tipo</label><select id="cxT"><option value="">SELECIONE</option>${CXT_OPC.concat(c&&!CXT_OPC.includes(c.tipo)?[c.tipo]:[]).map(k=>`<option value="${k}" ${tp===k?'selected':''}>${CXT[k][0]}</option>`).join('')}</select>

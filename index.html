@@ -44,6 +44,7 @@ body.naInicio .topo{padding-top:14px;padding-bottom:14px}body.naInicio .topoTxt 
 .tiles button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:112px;padding:10px 6px;border-radius:18px;border:0;background:var(--c);color:#fff;font:inherit;font-size:1.25rem;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:pointer;line-height:1.15}
 .tiles button.full{grid-column:1/-1}
 .tiles .gIc{font-size:2.1rem;line-height:1}
+.tiles button>span:last-child{font-size:.95rem;text-transform:uppercase;letter-spacing:.03em}
 .tiles small{font-size:.72rem;font-weight:700;opacity:.9;letter-spacing:.04em}
 .barra{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:var(--accent);color:#fff;font-size:.92rem;font-weight:700;border:0;width:100%;font-family:inherit;cursor:pointer}
 .tela{background:#fff;border-radius:14px;box-shadow:0 1px 5px rgba(0,0,0,.07);padding:8px}
@@ -62,6 +63,7 @@ body.naInicio .topo{padding-top:14px;padding-bottom:14px}body.naInicio .topoTxt 
 .cxComp .expRow{margin-top:10px;gap:6px}.cxComp .expRow .bt{font-size:.8rem;padding:6px 4px;border-radius:8px}
 .cxTop .bt{font-size:.9rem;padding:8px 4px!important;border-radius:8px}
 .cxComp .gHoje{display:none}.cxComp .row{align-items:flex-start}
+#dForm:not([hidden]),#cxForm:not([hidden]){position:fixed;inset:0;z-index:60;margin:0;border-radius:0;overflow:auto;padding:max(16px,env(safe-area-inset-top,0px)) 16px 40px;box-shadow:none;background:#fff}
 .tela>.barra{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;box-shadow:0 0 0 6px #fff,0 8px 12px -4px rgba(0,0,0,.22)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px 16px;margin-top:12px}
 .card h3{margin:0 0 10px;font-size:.95rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-left:5px solid var(--lima);padding-left:8px}
@@ -190,7 +192,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='56';
+const APP_VERSAO='58';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -295,7 +297,7 @@ document.addEventListener('change',e=>{const i=e.target;if(i.tagName==='SELECT'&
 
 /* ===================== NAVEGAÇÃO ===================== */
 const TELAS={caixa,menu,estoque,entrada:()=>formMov('ENTRADA'),saida:()=>formMov('SAIDA'),morte:()=>formMov('MORTE'),transf:()=>formMov('TRANSF'),despesas,faturas,historico,gestao,arrend:telaLocais,lotes:telaLocais};
-const TITULOS={menu:'Parcerias',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Despesas',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',caixa:'Caixa',arrend:'Parceiros e Lotes',lotes:'Parceiros e Lotes'};
+const TITULOS={menu:'Parcerias',estoque:'Estoque de animais',entrada:'Entrada de animais',saida:'Saídas/Transf',morte:'Lançar morte',transf:'Transferência',despesas:'Contas a pagar/pago',faturas:'Faturas do mês',historico:'Movimentações',gestao:'Gestão',caixa:'Caixa',arrend:'Parceiros e Lotes',lotes:'Parceiros e Lotes'};
 let TELA='menu',VOLTA=null;
 function cancelarForm(){if(VOLTA)return voltar();go(TELA);scrollTo(0,0)}
 function voltar(){const md=document.querySelector('.modal,.pk');if(md){md.remove();return}if(VOLTA){const f=VOLTA;VOLTA=null;f();scrollTo(0,0);return}go('menu')}
@@ -592,7 +594,7 @@ function gerarDespesas(ym){
 
 /* ===================== DESPESAS ===================== */
 let DSF={};
-function abrirDesp(){$('#dForm').hidden=false;$('#dNova').hidden=true;VOLTA=()=>despesas();scrollTo(0,0)}
+function abrirDesp(){$('#dForm').hidden=false;$('#dForm').scrollTop=0;VOLTA=()=>despesas()}
 function despesas(){syncProvisoes();
   $('#cx').innerHTML=`<div class="row" id="dNova" style="margin-top:12px;grid-template-columns:1fr"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirDesp()">+ Despesa</button></div>
   <div class="card" id="dForm" hidden><h3>Nova despesa</h3>
@@ -612,7 +614,7 @@ function despesas(){syncProvisoes();
 function salvarDesp(){const v=mv('dV');if(!$('#dT').value)return toast('Selecione o tipo');if(!$('#dA').value)return toast('Selecione o parceiro');if(!v)return toast('Informe o valor');if(!$('#dS').value)return toast('Selecione a situação');
   const old=$('#dId').value&&DB.desp.find(x=>x.id===$('#dId').value)||{};
   put('desp',{...old,id:old.id||nid('D'),data:$('#dD').value,tipo:$('#dT').value,arrId:$('#dA').value,loteId:$('#dL').value,desc:$('#dDs').value.trim(),valor:v,status:$('#dS').value,...lerPagador('d'),pagoEm:$('#dS').value==='PAGO'?(old.pagoEm||$('#dD').value):''});toast(old.id?'Despesa alterada ✓':'Despesa registrada ✓');despesas()}
-function editarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;abrirDesp();$('#dForm h3').textContent='Editar despesa';const i=$('#dD');i.value=d.data;syncData(i);$('#dT').value=d.tipo;$('#dA').value=d.arrId;$('#dA').onchange();$('#dL').value=d.loteId||'';$('#dDs').value=d.desc||'';smv('dV',d.valor);$('#dS').value=d.status;$('#dId').value=d.id;$('#dPgBox').innerHTML=campoPagador('d',d.pagador,d.conta);syncSels();scrollTo(0,0)}
+function editarDesp(id){const d=DB.desp.find(x=>x.id===id);if(!d)return;abrirDesp();$('#dForm h3').textContent='Editar despesa';const i=$('#dD');i.value=d.data;syncData(i);$('#dT').value=d.tipo;$('#dA').value=d.arrId;$('#dA').onchange();$('#dL').value=d.loteId||'';$('#dDs').value=d.desc||'';smv('dV',d.valor);$('#dS').value=d.status;$('#dId').value=d.id;$('#dPgBox').innerHTML=campoPagador('d',d.pagador,d.conta);syncSels()}
 function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value,pp=$('#dfP').value;DSF={p:pp,m:ym,s};
   const daProp=d=>!pp||(d.loteId?loteDe(d.loteId).prop===pp:DB.lotes.some(l=>l.arrId===d.arrId&&l.prop===pp));
   const refYm=d=>d.ref&&/^\d\d\/\d{4}$/.test(d.ref)?d.ref.slice(3)+'-'+d.ref.slice(0,2):'';

@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='42';
+const APP_VERSAO='43';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -492,10 +492,28 @@ function baseLotes(arrId,ym){if(!temQuit(arrId,ym))return null;return calcFatura
 function baseQ(arrId,ym,tp){const b=baseLotes(arrId,ym);if(!b)return 0;return r2(b.reduce((s,x)=>s+(tp==='S'?x.salario:x.valor),0))}
 const pagoQ=(arrId,ym,tp)=>r2(somaP(pagosDe(arrId,ym,tp))+baseQ(arrId,ym,tp));
 const fmtCorte=()=>{const d=new Date(QUIT.corte+'T12:00:00');d.setDate(d.getDate()-1);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')};
+/* detalhe da fatura complementar: movimentos a partir do corte, com dias proporcionais */
+function infoCompl(arrId,ym,tp){const a=arrDe(arrId),[Y,M]=ym.split('-').map(Number),ult=new Date(Y,M,0).getDate(),sal=tp==='S';
+  const lotes=DB.lotes.filter(l=>l.arrId===arrId),NOME={ENTRADA:'Entrada',SAIDA:'Saída',MORTE:'Morte',TRANSF:'Transferência'};
+  const its=[];DB.movs.filter(m=>m.data>=QUIT.corte&&m.data<=ym+'-'+String(ult).padStart(2,'0')).sort((x,y)=>x.data.localeCompare(y.data)).forEach(m=>lotes.forEach(l=>{const e=efeito(m,l.id);if(!e)return;const d=+m.data.slice(8),dias=ult-d;its.push({m,l,e,dias,v:r2(e*dias*(l.valorCab||0)/30)})}));
+  const tot=r2(its.reduce((s,x)=>s+x.v,0)),bq=baseQ(arrId,ym,tp),pend=Math.max(r2(totMes(arrId,ym,tp)-pagoQ(arrId,ym,tp)),0);
+  const b=baseLotes(arrId,ym)||[],F=calcFatura(ym).filter(x=>x.l.arrId===arrId),novos=F.filter(x=>x.salario>0&&!(b.find(y=>y.l.id===x.l.id)||{}).salario);
+  const cd='text-align:center';
+  const tab=sal?`<p style="margin:6px 0">O salário é cobrado por lote no mês. ${novos.length?'Lotes que passaram a ter gado a partir de '+fmtD(QUIT.corte)+':':'Nenhum lote novo.'}</p>${novos.length?`<table class="fat"><tr><th>Lote</th><th style="${cd}">Salário</th></tr>${novos.map(x=>`<tr><td>${esc(catLote(x.l)||x.l.nome)}<br><span class="mut">${esc(x.l.prop||'')}</span></td><td style="${cd}">${R$(x.salario)}</td></tr>`).join('')}</table>`:''}`
+   :`<div class="scroll"><table class="fat"><tr><th>Data</th><th>Lote / Movimento</th><th style="${cd}">Qtd</th><th style="${cd}">Dias</th><th style="${cd}">R$/cab</th><th style="${cd}">Valor</th></tr>
+   ${its.map(x=>`<tr><td style="${cd}">${fmtD(x.m.data).slice(0,5)}</td><td>${esc(catLote(x.l)||x.l.nome)}<br><span class="mut">${NOME[x.m.tipo]||x.m.tipo} · ${esc(x.l.prop||'')}</span></td><td style="${cd};color:${x.e>0?'var(--ok)':'var(--err)'}">${x.e>0?'+':'−'}${Math.abs(x.e)}</td><td style="${cd}">${x.dias}</td><td style="${cd}">${R$(x.l.valorCab||0)}</td><td style="${cd}"><b>${R$(x.v)}</b></td></tr>`).join('')}
+   <tr class="tot"><td colspan="5">Total</td><td style="${cd}">${R$(tot)}</td></tr></table></div>
+   <p class="mut" style="margin:8px 0 0;font-size:.82rem">Cálculo: quantidade × dias × valor por cabeça ÷ 30. Os dias contam do dia do movimento até o fim do mês (${ult} dias no mês): entrou dia 25 → ${ult-25} dias. Saída, morte e transferência descontam os dias que faltavam.</p>`;
+  const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:560px;text-align:left"><h3 style="margin-top:0">${sal?'Salário':'Aluguel'} complementar · ${esc(a.nome)} · ${String(M).padStart(2,'0')}/${Y}</h3>
+  <p style="margin:0 0 6px">O mês foi quitado na planilha anterior com o gado lançado até <b>${fmtCorte()}</b> (${R$(bq)}). O gado que entrou ou saiu a partir de <b>${fmtD(QUIT.corte).slice(0,5)}</b> gera esta fatura complementar, cobrada até o fim do mês.</p>
+  ${tab}
+  <table style="margin-top:10px"><tr><td>Quitado (planilha anterior)</td><td class="n" style="color:var(--ok)">${R$(bq)}</td></tr><tr><td>Pago no complementar</td><td class="n" style="color:var(--ok)">${R$(somaP(pagosDe(arrId,ym,tp)))}</td></tr><tr class="tot"><td>Complementar à pagar</td><td class="n" style="color:var(--err)">${R$(pend)}</td></tr></table>
+  <div class="btRow"><button class="bt verde" id="icOk">OK</button></div></div>`;
+  document.body.appendChild(m);m.querySelector('#icOk').onclick=()=>m.remove()}
 function pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS){
   const bloco=(nome,tot,tp,calc,aj)=>{if(quitado(ym))return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:var(--ok)">QUITADO</b></span><b style="color:var(--ok)">${R$(tot)}</b></div></div>`;const ps=pagosDe(a.id,ym,tp),bq=baseQ(a.id,ym,tp),pg=r2(somaP(ps)+bq),pend=Math.max(r2(r2(tot)-pg),0);
     return `<div class="pgB ${pend>0.004?'pgPend':'pgOk'}"><div class="pgH"><span>${nome} - <b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${pend>0.004?'À PAGAR':(bq&&!ps.length?'QUITADO':'PAGO')}</b></span><b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${R$(pend>0.004?pend:pg)}</b></div>
-    ${bq?`<div class="pgL"><span class="mut">Quitado até ${fmtCorte()} (planilha anterior)</span><b style="color:var(--ok)">${R$(bq)}</b></div>${pend>0.004?`<div class="pgL"><span class="mut">Gado que entrou a partir de ${fmtCorte().replace(/^\d+/,d=>String(+d+1).padStart(2,'0'))} (até o fim do mês)</span><b style="color:var(--err)">${R$(pend)}</b></div>`:''}`:''}${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb del" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
+    ${bq?`<div class="pgL"><span class="mut">Quitado até ${fmtCorte()} (planilha anterior)</span><b style="color:var(--ok)">${R$(bq)}</b></div>${pend>0.004?`<div class="pgL" style="cursor:pointer" onclick="infoCompl('${a.id}','${ym}','${tp}')"><span class="mut">Gado que entrou a partir de ${fmtCorte().replace(/^\d+/,d=>String(+d+1).padStart(2,'0'))} (até o fim do mês)<br><span style="color:#3f80c4;font-weight:700;text-decoration:underline">ⓘ Mais informações</span></span><b style="color:var(--err)">${R$(pend)}</b></div>`:''}`:''}${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb del" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
     ${somaP(ps)&&pend>0.004?`<div class="pgL"><span class="mut">Pago</span><b style="color:var(--ok)">${R$(somaP(ps))}</b></div>`:''}
     ${pend>0.004?`<div class="pgBt"><button class="bt sec" onclick="ajustarValor('${a.id}','${ym}','${tp}',${r2(calc)})">✏️ Editar${aj?' <small style="font-size:.72rem">(ajustado)</small>':''}</button>${pend>0.004?`<button class="bt verde" onclick="abrirPag('${a.id}','${ym}',${pend},'${tp}')">💵 Pagar</button>`:''}</div>`:''}</div>`};
   return (r2(ta)>0||pagosDe(a.id,ym,'P').length?bloco('Aluguel do mês',ta,'P',taC,ajP):'')+(r2(sa)>0||pagosDe(a.id,ym,'S').length?bloco('Salário do mês',sa,'S',saC,ajS):'')}

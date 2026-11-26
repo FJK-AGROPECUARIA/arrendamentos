@@ -190,7 +190,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='54';
+const APP_VERSAO='55';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -674,7 +674,7 @@ function caixa(){const ps=DB.props.filter(p=>p!==PAG0);if(CXF&&!ps.includes(CXF)
   <div class="card"><h3>Saldo com a FJK</h3><div class="cxGrid">${ps.filter(p=>!CXF||p===CXF||true).map(p=>{const v=saldoAte(p,CXM),sel=CXF===p;return `<div class="cxQ${sel?' sel':''}" onclick="CXF=CXF==='${p}'?'':'${p}';caixa()"><div class="cxN">${esc(p).toUpperCase()}</div><div class="cxV" style="color:${v>0.004?'var(--ok)':v<-0.004?'var(--err)':'#7a8590'}">${v>0.004?'+ '+R$(v):v<-0.004?'− '+R$(-v):'ACERTADO'}</div></div>`}).join('')||'<p class="mut">Nenhum proprietário além da FJK.</p>'}</div>
   ${CXF?'':'<p class="mut" style="text-align:center;margin:8px 0 0;font-size:.85rem">Toque no proprietário para ver o extrato.</p>'}</div>
   <div class="card" id="cxExt" ${CXF?'':'hidden'}></div>
-  <div class="hint">Saldo positivo (verde): o proprietário tem crédito com a FJK. Negativo (vermelho): o proprietário deve à FJK. Despesas pagas pela FJK que são dele entram como débito; saldo colocado e acertos entram como crédito. Tudo conta pela data do pagamento.</div>`;
+`;
   $('#cxP').onchange=()=>{CXF=$('#cxP').value;caixa()};$('#cxM').onchange=()=>{CXM=$('#cxM').value||CXM;caixa()};
   if(!CXF)return;
   const [cY,cM]=CXM.split('-').map(Number),antM=cM===1?(cY-1)+'-12':cY+'-'+String(cM-1).padStart(2,'0'),ult=String(new Date(cY,cM,0).getDate()).padStart(2,'0');

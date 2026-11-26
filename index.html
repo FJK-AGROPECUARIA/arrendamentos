@@ -190,7 +190,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='53';
+const APP_VERSAO='54';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -661,7 +661,7 @@ function extrato(p){const it=[];
     if(pag!==p&&meu>0.004)it.push({data:dt,v:-meu,txt:txt+` (parte de ${p}, pago por ${pag})`,d});
     else if(pag===p&&r2(d.valor-meu)>0.004)it.push({data:dt,v:r2(d.valor-meu),txt:txt+` (${p} pagou parte dos outros)`,d})});
   DB.caixa.filter(c=>c.prop===p).forEach(c=>it.push({data:c.data,v:(c.tipo==='DEVOLUCAO'?-1:1)*(+c.valor||0),txt:({APORTE:'Saldo adicionado em conta',ACERTO:'Acerto em conta',DEVOLUCAO:'FJK devolveu da conta'}[c.tipo]||c.tipo)+(c.conta?' '+c.conta:'')+(c.obs&&c.obs!=='Saldo colocado no caixa'?' · '+c.obs:''),c}));
-  it.sort((a,b)=>a.data.localeCompare(b.data));let s=0;it.forEach(x=>{s=r2(s+x.v);x.saldo=s});return it}
+  it.sort((a,b)=>a.data.localeCompare(b.data)||((b.v>0)-(a.v>0)));let s=0;it.forEach(x=>{s=r2(s+x.v);x.saldo=s});return it}
 const saldoCx=p=>{const e=extrato(p);return e.length?e[e.length-1].saldo:0};
 const rotSaldo=(v,p)=>v>0.004?`<b style="color:var(--ok)">FJK deve ${R$(v)} ${p?'para '+p:''}</b>`:v<-0.004?`<b style="color:var(--err)">${p||''} deve ${R$(-v)} à FJK</b>`:'<b class="mut">Acertado</b>';
 let CXF='',CXM='';

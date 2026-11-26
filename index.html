@@ -47,6 +47,15 @@ body.naInicio .topo{padding-top:14px;padding-bottom:14px}body.naInicio .topoTxt 
 .tiles small{font-size:.72rem;font-weight:700;opacity:.9;letter-spacing:.04em}
 .barra{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:var(--accent);color:#fff;font-size:.92rem;font-weight:700;border:0;width:100%;font-family:inherit;cursor:pointer}
 .tela{background:#fff;border-radius:14px;box-shadow:0 1px 5px rgba(0,0,0,.07);padding:8px}
+.cxGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:6px}
+.cxQ{border:2px solid #d9cbb8;border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;background:#fff}
+.cxQ.sel{border-color:#6d4321;background:#f6efe6;box-shadow:0 0 0 2px #6d432133}
+.cxN{font-weight:800;letter-spacing:.03em;font-size:.95rem;color:var(--fg)}
+.cxV{font-weight:800;font-size:1.05rem;margin-top:4px}
+.cxL{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #eee3d6;font-size:.88rem}
+.cxL .cxD{flex:none;color:#7a8590;font-weight:700;width:42px;text-align:center}
+.cxL .cxT{flex:1;min-width:0}
+.cxS{background:#f6efe6;border-radius:10px;padding:9px 10px;border:0;margin:6px 0;font-weight:700;justify-content:space-between}
 .tela>.barra{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;box-shadow:0 0 0 6px #fff,0 8px 12px -4px rgba(0,0,0,.22)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px 16px;margin-top:12px}
 .card h3{margin:0 0 10px;font-size:.95rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-left:5px solid var(--lima);padding-left:8px}
@@ -175,7 +184,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='49';
+const APP_VERSAO='50';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -656,15 +665,20 @@ function caixa(){const ps=DB.props.filter(p=>p!==PAG0);if(CXF&&!ps.includes(CXF)
   $('#cx').innerHTML=`<div class="row" style="margin-top:12px"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','APORTE')">+ Saldo</button><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','ACERTO')">Acerto</button></div>
   <div class="card" id="cxForm" hidden></div>
   <div class="card fBox">${filtroMes('cxM','Mês',CXM)}${filtroSel('cxP','Proprietário',[['','Todos'],...ps.map(p=>[p,p])],CXF)}</div>
-  <div class="card"><h3>Extrato com a FJK</h3>${ps.filter(p=>!CXF||p===CXF).map(p=>`<div class="list-it" style="cursor:pointer" onclick="CXF='${p}';caixa()"><b>${p}</b><span style="text-align:right">${rotSaldo(saldoAte(p,CXM),p)}</span></div>`).join('')||'<p class="mut">Nenhum proprietário além da FJK.</p>'}</div>
-  <div class="card" id="cxExt"></div>
-  <div class="hint">Despesas pagas pela FJK que são de outro proprietário entram como débito dele. Acertos e saldo colocado entram como crédito. Tudo conta pela data do pagamento. O saldo é o acumulado até o fim do mês escolhido.</div>`;
+  <div class="card"><h3>Saldo com a FJK</h3><div class="cxGrid">${ps.filter(p=>!CXF||p===CXF||true).map(p=>{const v=saldoAte(p,CXM),sel=CXF===p;return `<div class="cxQ${sel?' sel':''}" onclick="CXF=CXF==='${p}'?'':'${p}';caixa()"><div class="cxN">${esc(p).toUpperCase()}</div><div class="cxV" style="color:${v>0.004?'var(--ok)':v<-0.004?'var(--err)':'#7a8590'}">${v>0.004?'+ '+R$(v):v<-0.004?'− '+R$(-v):'ACERTADO'}</div></div>`}).join('')||'<p class="mut">Nenhum proprietário além da FJK.</p>'}</div>
+  ${CXF?'':'<p class="mut" style="text-align:center;margin:8px 0 0;font-size:.85rem">Toque no proprietário para ver o extrato.</p>'}</div>
+  <div class="card" id="cxExt" ${CXF?'':'hidden'}></div>
+  <div class="hint">Saldo positivo (verde): o proprietário tem crédito com a FJK. Negativo (vermelho): o proprietário deve à FJK. Despesas pagas pela FJK que são dele entram como débito; saldo colocado e acertos entram como crédito. Tudo conta pela data do pagamento.</div>`;
   $('#cxP').onchange=()=>{CXF=$('#cxP').value;caixa()};$('#cxM').onchange=()=>{CXM=$('#cxM').value||CXM;caixa()};
-  const e=ps.filter(p=>!CXF||p===CXF).flatMap(p=>extrato(p).map(x=>({...x,p}))).filter(x=>mesItem(x)===CXM).sort((a,b)=>b.data.localeCompare(a.data));
-  const [cY,cM]=CXM.split('-').map(Number),antM=cM===1?(cY-1)+'-12':cY+'-'+String(cM-1).padStart(2,'0');
-  const linhasSaldo=(tit,ym)=>`<div style="background:#f6efe6;border-radius:10px;padding:8px 10px;margin:8px 0"><b>${tit}</b>${ps.filter(p=>!CXF||p===CXF).map(p=>`<div class="pgL"><span>${p}</span>${rotSaldo(saldoAte(p,ym),p)}</div>`).join('')}</div>`;
-  $('#cxExt').innerHTML=`<h3>Extrato · ${CXF||'Todos'} · ${CXM.slice(5)}/${CXM.slice(0,4)}</h3>`+linhasSaldo('Saldo anterior',antM)+(e.map(x=>`<div class="list-it"><div><b style="color:${x.v<0?'var(--err)':'var(--ok)'}">${x.v<0?'−':'+'} ${R$(Math.abs(x.v))}</b> · ${fmtD(x.data)}${CXF?'':' · <b>'+x.p+'</b>'}<br><span class="mut">${esc(x.txt)}</span><br><span class="mut" style="font-size:.78rem">saldo depois: ${R$(x.saldo)}</span></div>
-      ${x.c?`<div class="acoes"><button class="icb" onclick="abrirCx('${x.c.id}')">✏️</button><button class="icb del" onclick="confirmar('Excluir este lançamento do caixa?',()=>{del('caixa','${x.c.id}');caixa()})">✕</button></div>`:''}</div>`).join('')||'<p class="mut">Nenhum lançamento no mês.</p>')+linhasSaldo('Saldo no fim do mês',CXM)}
+  if(!CXF)return;
+  const [cY,cM]=CXM.split('-').map(Number),antM=cM===1?(cY-1)+'-12':cY+'-'+String(cM-1).padStart(2,'0'),ult=String(new Date(cY,cM,0).getDate()).padStart(2,'0');
+  const sv=v=>`<b style="color:${v>0.004?'var(--ok)':v<-0.004?'var(--err)':'#7a8590'}">${v>0.004?'+ '+R$(v):v<-0.004?'− '+R$(-v):'Acertado'}</b>`;
+  const e=extrato(CXF).filter(x=>mesItem(x)===CXM);
+  const txtC=x=>esc(String(x.txt).replace(/ \((parte de|[^()]* pagou parte)[^)]*\)$/,'').replace(/^Aluguel · [^·]+ · ALUGUEL /,'Aluguel ').replace(/ · /g,' · '));
+  $('#cxExt').innerHTML=`<h3>Extrato · ${esc(CXF)} · ${CXM.slice(5)}/${CXM.slice(0,4)}</h3>
+    <div class="cxL cxS"><span>Saldo anterior (até ${String(new Date(cY,cM-1,0).getDate()).padStart(2,'0')}/${antM.slice(5)}/${antM.slice(0,4)})</span>${sv(saldoAte(CXF,antM))}</div>
+    ${e.map(x=>`<div class="cxL"><span class="cxD">${fmtD(x.data).slice(0,5)}</span><span class="cxT">${txtC(x)}</span><b style="color:${x.v<0?'var(--err)':'var(--ok)'};white-space:nowrap">${x.v<0?'−':'+'} ${R$(Math.abs(x.v))}</b>${x.c?`<button class="icb" onclick="abrirCx('${x.c.id}')">✏️</button><button class="icb del" onclick="confirmar('Excluir este lançamento do caixa?',()=>{del('caixa','${x.c.id}');caixa()})">✕</button>`:''}</div>`).join('')||'<p class="mut" style="margin:8px 0">Nenhuma movimentação no mês.</p>'}
+    <div class="cxL cxS"><span>Saldo em ${ult}/${CXM.slice(5)}/${CXM.slice(0,4)}</span>${sv(saldoAte(CXF,CXM))}</div>`}
 function abrirCx(id,tp){const c=id?DB.caixa.find(x=>x.id===id):null;tp=c?c.tipo:tp;VOLTA=()=>caixa();const ps=DB.props.filter(p=>p!==PAG0);
   const f=$('#cxForm');f.hidden=false;f.innerHTML=`<h3>${c?'Editar lançamento':(CXT[tp]||['Novo lançamento'])[0]}</h3>
   <label>Data</label>${campoData('cxD',c?c.data:hoje())}

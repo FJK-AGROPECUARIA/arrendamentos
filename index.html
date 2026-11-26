@@ -184,7 +184,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='50';
+const APP_VERSAO='51';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -678,7 +678,43 @@ function caixa(){const ps=DB.props.filter(p=>p!==PAG0);if(CXF&&!ps.includes(CXF)
   $('#cxExt').innerHTML=`<h3>Extrato · ${esc(CXF)} · ${CXM.slice(5)}/${CXM.slice(0,4)}</h3>
     <div class="cxL cxS"><span>Saldo anterior (até ${String(new Date(cY,cM-1,0).getDate()).padStart(2,'0')}/${antM.slice(5)}/${antM.slice(0,4)})</span>${sv(saldoAte(CXF,antM))}</div>
     ${e.map(x=>`<div class="cxL"><span class="cxD">${fmtD(x.data).slice(0,5)}</span><span class="cxT">${txtC(x)}</span><b style="color:${x.v<0?'var(--err)':'var(--ok)'};white-space:nowrap">${x.v<0?'−':'+'} ${R$(Math.abs(x.v))}</b>${x.c?`<button class="icb" onclick="abrirCx('${x.c.id}')">✏️</button><button class="icb del" onclick="confirmar('Excluir este lançamento do caixa?',()=>{del('caixa','${x.c.id}');caixa()})">✕</button>`:''}</div>`).join('')||'<p class="mut" style="margin:8px 0">Nenhuma movimentação no mês.</p>'}
-    <div class="cxL cxS"><span>Saldo em ${ult}/${CXM.slice(5)}/${CXM.slice(0,4)}</span>${sv(saldoAte(CXF,CXM))}</div>`}
+    <div class="cxL cxS"><span>Saldo em ${ult}/${CXM.slice(5)}/${CXM.slice(0,4)}</span>${sv(saldoAte(CXF,CXM))}</div>
+    <div class="cxComp"><h3 style="margin-top:14px">Extrato completo</h3>
+    <div class="row"><div><label>Data inicial</label>${campoData('cxI',CXI||((extrato(CXF)[0]||{}).data)||hoje().slice(0,4)+'-01-01')}</div><div><label>Data final</label>${campoData('cxFi',CXFI||hoje())}</div></div>
+    <div class="btRow expRow"><button class="bt verde" onclick="relExtrato('pdf')">📄 PDF</button><button class="bt verde" onclick="relExtrato('img')">🖼 Foto</button><button class="bt verde" onclick="relExtrato('xls')">📊 Excel</button></div></div>`;
+  $('#cxI').onchange=e=>{CXI=e.target.value};$('#cxFi').onchange=e=>{CXFI=e.target.value}}
+let CXI='',CXFI='';
+const txtExt=x=>String(x.txt).replace(/ \((parte de|[^()]* pagou parte)[^)]*\)$/,'');
+function dadosExtrato(){const p=CXF,ini=$('#cxI').value,fim=$('#cxFi').value;if(!p)return null;if(!ini||!fim)return toast('Informe as datas'),null;if(ini>fim)return toast('Data inicial maior que a final'),null;
+  const all=extrato(p),ant=r2(all.filter(x=>x.data<ini).reduce((s,x)=>s+x.v,0)),its=all.filter(x=>x.data>=ini&&x.data<=fim);let sd=ant;
+  const L=its.map(x=>{sd=r2(sd+x.v);return {data:x.data,txt:txtExt(x),deb:x.v<0?-x.v:0,cre:x.v>0?x.v:0,saldo:sd}});return {p,ini,fim,ant,L,fin:sd}}
+const sinal=v=>(v>0.004?'+ ':v<-0.004?'− ':'')+R$(Math.abs(v));
+function imgExtrato(d){const M=30,cols=[['Data',130,'c'],['Descrição',470,'l'],['Débito',170,'c'],['Crédito',170,'c'],['Saldo',180,'c']];
+  const W=M*2+cols.reduce((a,c)=>a+c[1],0),RH=44,e2=2,H=120+30+52+44+RH*d.L.length+20+60+20;
+  const cv=document.createElement('canvas');cv.width=W*e2;cv.height=H*e2;const c=cv.getContext('2d');c.scale(e2,e2);const F='-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
+  c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#5a3618';c.fillRect(0,0,W,90);c.fillStyle='#a7bc09';c.fillRect(0,90,W,6);
+  c.fillStyle='#fff';c.font=`700 30px ${F}`;c.textBaseline='middle';c.textAlign='left';c.fillText('FJK - Extrato com a FJK - '+d.p,M,46);let y=120;
+  c.fillStyle='#5d6b7a';c.font=`600 20px ${F}`;c.fillText('Período: '+fmtD(d.ini)+' a '+fmtD(d.fim),M,y);y+=30;
+  const px=(k,al)=>{let x=M;for(let i=0;i<k;i++)x+=cols[i][1];const w=cols[k][1];return al==='l'?x+10:al==='c'?x+w/2:x+w-10};
+  const faixa=(tt,v)=>{c.fillStyle='#f1e8de';c.fillRect(M,y,W-2*M,44);c.fillStyle='#3d2410';c.font=`700 20px ${F}`;c.textAlign='left';c.fillText(tt,M+12,y+22);c.textAlign='center';c.fillStyle=v>0.004?'#2e7d32':v<-0.004?'#c62828':'#5d6b7a';c.fillText(Math.abs(v)<0.005?'Acertado':sinal(v),px(4,'c'),y+22);y+=52};
+  faixa('Saldo anterior',d.ant);
+  c.fillStyle='#6d4321';c.fillRect(M,y,W-2*M,40);c.font=`700 16px ${F}`;c.fillStyle='#fff';cols.forEach(([tt,w,al],k)=>{c.textAlign=al==='l'?'left':'center';c.fillText(tt.toUpperCase(),px(k,al),y+20)});y+=44;
+  d.L.forEach((r,i)=>{if(i%2){c.fillStyle='#faf7f3';c.fillRect(M,y,W-2*M,RH)}
+    const vals=[fmtD(r.data),r.txt,r.deb?R$(r.deb):'',r.cre?R$(r.cre):'',sinal(r.saldo)],cor=['#11253d','#11253d','#c62828','#2e7d32',r.saldo>0.004?'#2e7d32':r.saldo<-0.004?'#c62828':'#5d6b7a'];
+    vals.forEach((tx,k)=>{const [,w,al]=cols[k];c.textAlign=al==='l'?'left':'center';c.fillStyle=cor[k];let fs=19;const wt=k===1?500:700;c.font=`${wt} ${fs}px ${F}`;while(c.measureText(tx).width>w-16&&fs>10){fs--;c.font=`${wt} ${fs}px ${F}`}c.fillText(tx,px(k,al),y+RH/2)});
+    y+=RH;c.fillStyle='#e4dccf';c.fillRect(M,y-1,W-2*M,1)});
+  if(!d.L.length){c.fillStyle='#5d6b7a';c.font=`500 18px ${F}`;c.textAlign='left';c.fillText('Nenhuma movimentação no período.',M+12,y+22);y+=RH}
+  y+=20;c.fillStyle='#5a3618';c.fillRect(M,y,W-2*M,56);c.fillStyle='#a7bc09';c.fillRect(M,y,W-2*M,4);c.fillStyle='#fff';c.font=`800 22px ${F}`;c.textAlign='left';c.fillText('SALDO EM '+fmtD(d.fim),M+12,y+31);c.textAlign='center';c.fillText(Math.abs(d.fin)<0.005?'Acertado':sinal(d.fin),px(4,'c'),y+31);
+  return cv}
+function xlsExtrato(d){const H=t=>({v:t,s:1});const rows=[[H('Data'),H('Descrição'),H('Débito'),H('Crédito'),H('Saldo')]];
+  rows.push([{v:fmtD(d.ini),s:15},{v:'Saldo anterior',s:9},{v:'',s:9},{v:'',s:9},{v:d.ant,s:16}]);
+  d.L.forEach(r=>rows.push([{v:fmtD(r.data),s:15},{v:r.txt},r.deb?{v:r.deb,s:14}:{v:''},r.cre?{v:r.cre,s:14}:{v:''},{v:r.saldo,s:14}]));
+  rows.push([{v:fmtD(d.fim),s:15},{v:'SALDO FINAL',s:9},{v:r2(d.L.reduce((a,r)=>a+r.deb,0)),s:16},{v:r2(d.L.reduce((a,r)=>a+r.cre,0)),s:16},{v:d.fin,s:16}]);
+  return montarXlsx([['Extrato '+d.p.slice(0,20),rows,[12,48,16,16,16]]])}
+async function relExtrato(tp){const d=dadosExtrato();if(!d)return;const nome='FJK - Extrato '+d.p+' - '+dataArq(d.ini)+' a '+dataArq(d.fim);
+  try{if(tp==='xls')return await salvarOuEnviar([xlsExtrato(d)],[nome+'.xlsx'],XT);const cv=imgExtrato(d);
+    if(tp==='pdf')return await salvarOuEnviar([fzPdf([cv])],[nome+'.pdf'],'application/pdf');
+    const b=await new Promise(k=>cv.toBlob(k,'image/png'));return await salvarOuEnviar([b],[nome+'.png'],'image/png')}catch(e){toast('Não consegui gerar o arquivo')}}
 function abrirCx(id,tp){const c=id?DB.caixa.find(x=>x.id===id):null;tp=c?c.tipo:tp;VOLTA=()=>caixa();const ps=DB.props.filter(p=>p!==PAG0);
   const f=$('#cxForm');f.hidden=false;f.innerHTML=`<h3>${c?'Editar lançamento':(CXT[tp]||['Novo lançamento'])[0]}</h3>
   <label>Data</label>${campoData('cxD',c?c.data:hoje())}
@@ -792,11 +828,11 @@ function montarXlsx(ws){
 <fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
 <fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF6D4321"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF1E8DE"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="14"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment horizontal="center" wrapText="1"/></xf>
+<cellXfs count="17"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment horizontal="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="166" fontId="2" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-<xf numFmtId="170" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="170" fontId="2" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+<xf numFmtId="170" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="170" fontId="2" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/><xf numFmtId="170" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="170" fontId="2" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
   const ct=ws.map((w,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('');
   return zip([['[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${ct}</Types>`],
     ['_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],

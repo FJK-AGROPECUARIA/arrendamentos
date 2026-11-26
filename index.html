@@ -56,6 +56,11 @@ body.naInicio .topo{padding-top:14px;padding-bottom:14px}body.naInicio .topoTxt 
 .cxL .cxD{flex:none;color:#7a8590;font-weight:700;width:42px;text-align:center}
 .cxL .cxT{flex:1;min-width:0}
 .cxS{background:#f6efe6;border-radius:10px;padding:9px 10px;border:0;margin:6px 0;font-weight:700;justify-content:space-between}
+.cxComp .gNavData{gap:4px}.cxComp .gSeta{flex:0 0 30px;font-size:.8rem;border-radius:8px}
+.cxComp .gDataBox,.cxComp .gDataBox{min-height:34px;font-size:.82rem;border-radius:8px;padding:0 4px}.cxComp .gDataBox i{display:none}
+.cxComp label{font-size:.7rem;margin-top:4px}.cxComp .row{gap:8px}
+.cxComp .expRow{margin-top:10px;gap:6px}.cxComp .expRow .bt{font-size:.8rem;padding:6px 4px;border-radius:8px}
+.cxTop .bt{font-size:.9rem;padding:8px 4px!important;border-radius:8px}
 .tela>.barra{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;box-shadow:0 0 0 6px #fff,0 8px 12px -4px rgba(0,0,0,.22)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px 16px;margin-top:12px}
 .card h3{margin:0 0 10px;font-size:.95rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-left:5px solid var(--lima);padding-left:8px}
@@ -184,7 +189,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='51';
+const APP_VERSAO='52';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -662,7 +667,7 @@ let CXF='',CXM='';
 const mesItem=x=>String(x.data||'').slice(0,7); /* conta sempre pela data do pagamento */
 const saldoAte=(p,ym)=>r2(extrato(p).filter(x=>mesItem(x)<=ym).reduce((s,x)=>s+x.v,0));
 function caixa(){const ps=DB.props.filter(p=>p!==PAG0);if(CXF&&!ps.includes(CXF))CXF='';if(!CXM){CXM=hoje().slice(0,7);if(CXM<INI_PAG)CXM=INI_PAG}
-  $('#cx').innerHTML=`<div class="row" style="margin-top:12px"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','APORTE')">+ Saldo</button><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','ACERTO')">Acerto</button></div>
+  $('#cx').innerHTML=`<div class="row cxTop" style="margin-top:10px"><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','APORTE')">+ Saldo</button><button class="bt sec" style="margin:0;padding:12px 4px" onclick="abrirCx('','ACERTO')">Acerto</button></div>
   <div class="card" id="cxForm" hidden></div>
   <div class="card fBox">${filtroMes('cxM','Mês',CXM)}${filtroSel('cxP','Proprietário',[['','Todos'],...ps.map(p=>[p,p])],CXF)}</div>
   <div class="card"><h3>Saldo com a FJK</h3><div class="cxGrid">${ps.filter(p=>!CXF||p===CXF||true).map(p=>{const v=saldoAte(p,CXM),sel=CXF===p;return `<div class="cxQ${sel?' sel':''}" onclick="CXF=CXF==='${p}'?'':'${p}';caixa()"><div class="cxN">${esc(p).toUpperCase()}</div><div class="cxV" style="color:${v>0.004?'var(--ok)':v<-0.004?'var(--err)':'#7a8590'}">${v>0.004?'+ '+R$(v):v<-0.004?'− '+R$(-v):'ACERTADO'}</div></div>`}).join('')||'<p class="mut">Nenhum proprietário além da FJK.</p>'}</div>

@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='41';
+const APP_VERSAO='42';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -467,7 +467,7 @@ function faturas(){syncProvisoes();
   const r=()=>{const ym=$('#fM').value;if(!ym)return;const fa=$('#fA').value;FAT.ym=ym;FAT.arr=fa;
     if(quitado(ym)){$('#fR').innerHTML='<div class="card mut" style="text-align:center">Até 10/2026 está tudo quitado (lançado na planilha anterior).<br>As faturas começam em <b>11/2026</b>.</div>';return}const F=calcFatura(ym);let html='',tg=0,ts=0;
     DB.arr.filter(a=>!fa||a.id===fa).forEach(a=>{const fs=F.filter(x=>x.l.arrId===a.id);if(!fs.length)return;let ta=0,sa=0;
-      const rows=fs.map(x=>{ta+=x.valor;sa+=x.salario;return `<tr><td>${catLote(x.l)||x.l.nome}<br><span class="mut">${x.l.prop} · ${R$(x.l.valorCab)}/cab</span></td><td class="n">${x.cabIni}</td><td class="n">${x.ent?'+'+x.ent:''}${x.sai?' −'+x.sai:''}</td><td class="n">${N(x.cd/30)}</td><td class="n"><b>${R$(x.valor)}</b></td></tr>`}).join('');
+      const rows=fs.map(x=>{ta+=x.valor;sa+=x.salario;return `<tr><td>${catLote(x.l)||x.l.nome}<br><span class="mut">${x.l.prop} · ${R$(x.l.valorCab)}/cab</span></td><td class="n">${x.cabIni}</td><td class="n">${x.ent?'+'+x.ent:''}${x.ent&&x.sai?'<br>':''}${x.sai?'−'+x.sai:''}</td><td class="n">${N(x.cd/30)}</td><td class="n"><b>${R$(x.valor)}</b></td></tr>`}).join('');
       const taC=ta,saC=sa,ajP=ajDe(a.id,ym,'P'),ajS=ajDe(a.id,ym,'S');if(ajP)ta=+ajP.valor;if(ajS)sa=+ajS.valor;
       tg+=ta;ts+=sa;
       html+=`<div class="card fatC"><div class="arr-h"><h3 style="letter-spacing:.02em;color:var(--fg);font-weight:800">${a.nome} - ${a.cidade}</h3></div><div class="scroll"><table class="fat">
@@ -494,7 +494,7 @@ const pagoQ=(arrId,ym,tp)=>r2(somaP(pagosDe(arrId,ym,tp))+baseQ(arrId,ym,tp));
 const fmtCorte=()=>{const d=new Date(QUIT.corte+'T12:00:00');d.setDate(d.getDate()-1);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')};
 function pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS){
   const bloco=(nome,tot,tp,calc,aj)=>{if(quitado(ym))return `<div class="pgB"><div class="pgH"><span>${nome} - <b style="color:var(--ok)">QUITADO</b></span><b style="color:var(--ok)">${R$(tot)}</b></div></div>`;const ps=pagosDe(a.id,ym,tp),bq=baseQ(a.id,ym,tp),pg=r2(somaP(ps)+bq),pend=Math.max(r2(r2(tot)-pg),0);
-    return `<div class="pgB ${pend>0.004?'pgPend':'pgOk'}"><div class="pgH"><span>${nome} - <b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${pend>0.004?(bq?'COMPLEMENTAR À PAGAR':'À PAGAR'):(bq&&!ps.length?'QUITADO':'PAGO')}</b></span><b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${R$(pend>0.004?pend:pg)}</b></div>
+    return `<div class="pgB ${pend>0.004?'pgPend':'pgOk'}"><div class="pgH"><span>${nome} - <b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${pend>0.004?'À PAGAR':(bq&&!ps.length?'QUITADO':'PAGO')}</b></span><b style="color:${pend>0.004?'var(--err)':'var(--ok)'}">${R$(pend>0.004?pend:pg)}</b></div>
     ${bq?`<div class="pgL"><span class="mut">Quitado até ${fmtCorte()} (planilha anterior)</span><b style="color:var(--ok)">${R$(bq)}</b></div>${pend>0.004?`<div class="pgL"><span class="mut">Gado que entrou a partir de ${fmtCorte().replace(/^\d+/,d=>String(+d+1).padStart(2,'0'))} (até o fim do mês)</span><b style="color:var(--err)">${R$(pend)}</b></div>`:''}`:''}${ps.map(p=>`<div class="pgL pgI"><span class="mut">${fmtD(p.data)} · ${esc(p.conta||'')}${p.obs?' · '+esc(p.obs):''}</span><b>${R$(p.valor)}</b><button class="icb" onclick="editPag('${p.id}')">✏️</button><button class="icb del" onclick="delPag('${p.id}')">✕</button></div>`).join('')}
     ${somaP(ps)&&pend>0.004?`<div class="pgL"><span class="mut">Pago</span><b style="color:var(--ok)">${R$(somaP(ps))}</b></div>`:''}
     ${pend>0.004?`<div class="pgBt"><button class="bt sec" onclick="ajustarValor('${a.id}','${ym}','${tp}',${r2(calc)})">✏️ Editar${aj?' <small style="font-size:.72rem">(ajustado)</small>':''}</button>${pend>0.004?`<button class="bt verde" onclick="abrirPag('${a.id}','${ym}',${pend},'${tp}')">💵 Pagar</button>`:''}</div>`:''}</div>`};

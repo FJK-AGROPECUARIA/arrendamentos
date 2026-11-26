@@ -65,7 +65,7 @@ body.naInicio .topo{padding-top:14px;padding-bottom:14px}body.naInicio .topoTxt 
 .cxComp .gHoje{display:none}.cxComp .row{align-items:flex-start}
 #cx.fOn>*:not(#dForm):not(#cxForm){display:none!important}
 .cxComp .gSeta{display:none!important}.cxComp .gDataBox{min-height:38px}.cxS b,.cxL b{white-space:nowrap}
-.dIt{align-items:flex-start}.dTop{display:flex;align-items:center;gap:8px;margin-bottom:4px}.dVal{font-size:1.08rem}
+.dIt{display:block}.dIt .dTop .acoes{display:flex;gap:6px}.dTop{display:flex;align-items:center;gap:8px;margin-bottom:4px}.dVal{font-size:1.08rem}
 .dLn{display:flex;gap:6px;font-size:.84rem;line-height:1.35;color:var(--fg)}.dRt{flex:none;width:82px;color:#7a8590;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding-top:2px}
 .tela>.barra{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;box-shadow:0 0 0 6px #fff,0 8px 12px -4px rgba(0,0,0,.22)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px 16px;margin-top:12px}
@@ -195,7 +195,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='62';
+const APP_VERSAO='63';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -624,10 +624,10 @@ function listaDesp(){const ym=$('#dfM').value,s=$('#dfS').value,pp=$('#dfP').val
   const ds=DB.desp.filter(d=>(!ym||d.data.startsWith(ym)||refYm(d)===ym)&&(!s||d.status===s)&&daProp(d)).sort((a,b)=>b.data.localeCompare(a.data));
   const tot=ds.reduce((a,d)=>a+d.valor,0),ap=ds.filter(d=>d.status==='A PAGAR').reduce((a,d)=>a+d.valor,0);
   const li=(r,v)=>v?`<div class="dLn"><span class="dRt">${r}</span><span>${esc(v)}</span></div>`:'';
-  $('#dLst').innerHTML=(ds.map(d=>{const lt=d.loteId?loteDe(d.loteId):null,pg=d.status==='PAGO';return `<div class="list-it dIt"><div style="flex:1;min-width:0"><div class="dTop"><b class="dVal">${R$(d.valor)}</b><span class="tag ${pg?'E':'M'}">${d.status}</span></div>
+  $('#dLst').innerHTML=(ds.map(d=>{const lt=d.loteId?loteDe(d.loteId):null,pg=d.status==='PAGO';return `<div class="list-it dIt"><div style="flex:1;min-width:0"><div class="dTop"><b class="dVal">${R$(d.valor)}</b><span class="tag ${pg?'E':'M'}">${d.status}</span><div class="acoes" style="margin-left:auto">${acoesDesp(d)}</div></div>
   ${li('Tipo',d.tipo==='ARRENDAMENTO'?'ALUGUEL':d.tipo)}${li('Parceiro',arrDe(d.arrId).nome||'')}${li('Lote',lt?(catLote(lt)||lt.nome)+' ('+lt.prop+')':'')}${li('Descrição',d.desc||'')}
   ${li(pg?'Pago em':'Vencimento',fmtD(pg?(d.pagoEm||d.data):d.data))}${pg?li('Pago por',(d.pagador||PAG0)+(d.conta?' · '+d.conta:'')):''}</div>
-  <div class="acoes">${acoesDesp(d)}</div></div>`}).join('')||'<p class="mut">Nenhuma despesa no filtro.</p>')
+  </div>`}).join('')||'<p class="mut">Nenhuma despesa no filtro.</p>')
   +`<table style="margin-top:8px"><tr class="tot"><td>Total</td><td class="n">${R$(tot)}</td></tr><tr><td>A pagar</td><td class="n" style="color:var(--err)">${R$(ap)}</td></tr></table>`}
 function acoesDesp(d){const id=String(d.id);
   if(id.startsWith('DV')){const [k,arr,ym]=id.split('_'),tp=k.slice(2);return `<button class="bt sm" style="height:40px" onclick="abrirPag('${arr}','${ym}',${r2(d.valor)},'${tp}')">Pagar</button><button class="icb" title="Ajustar valor do mês" onclick="ajustarValor('${arr}','${ym}','${tp}',${r2(calcFatura(ym).filter(x=>x.l.arrId===arr).reduce((s,x)=>s+(tp==='S'?x.salario:x.valor),0))})">✏️</button>`}

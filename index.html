@@ -174,7 +174,7 @@ let FILA=[];try{FILA=JSON.parse(localStorage.getItem(LS+'_fila'))||[]}catch(e){}
 const api=()=>{try{return localStorage.getItem(LS+'_url')||API_URL}catch(e){return API_URL}};
 let enviando=false,online=null;
 function salvarFila(){try{localStorage.setItem(LS+'_fila',JSON.stringify(FILA))}catch(e){}}
-const APP_VERSAO='45';
+const APP_VERSAO='46';
 function status(){const e=$('#st');if(!e)return;e.className='nuvem';e.hidden=false;
   const u=DB.ultSync?new Date(DB.ultSync):null;
   $('#hoje').textContent=(u?`Atualizado ${u.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} às ${u.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Sem sincronizar')+' – v'+APP_VERSAO;
@@ -519,16 +519,19 @@ function pagBloco(a,ym,ta,sa,taC,saC,ajP,ajS){
   return (r2(ta)>0||pagosDe(a.id,ym,'P').length?bloco('Aluguel do mês',ta,'P',taC,ajP):'')+(r2(sa)>0||pagosDe(a.id,ym,'S').length?bloco('Salário do mês',sa,'S',saC,ajS):'')}
 function abrirPag(arrId,ym,pend,tp,ed){const sal=tp==='S';const a=arrDe(arrId);const contas=[...new Set(DB.pags.map(p=>p.conta).filter(Boolean))];
   const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box" style="max-width:440px;text-align:left"><h3 style="margin-top:0">${ed?'Editar pagamento':'Pagar'} ${sal?'salário':'aluguel'} · ${esc(a.nome)} · ${ym.slice(5)}/${ym.slice(0,4)}</h3>
-  <p class="mut" style="margin:0 0 6px">${ed?'Máximo':'À pagar'}: <b>${R$(pend)}</b></p>
+  ${ed?`<p class="mut" style="margin:0 0 6px">Máximo: <b>${R$(pend)}</b></p>`:''}
   <label>Data</label>${campoData('pgD',ed?ed.data:hoje())}
-  ${ed?'':`<div class="row"><div><label>Desconto (R$)</label><input id="pgDs" type="text" inputmode="numeric" class="moeda" value=""></div><div><label>Valor pago (R$)</label><input id="pgV" type="text" inputmode="numeric" class="moeda" value="${fmtMoeda(pend)}"></div></div>
+  ${ed?'':`<div class="row"><div><label>Valor a pagar (R$)</label><input id="pgAp" type="text" readonly tabindex="-1" value="${fmtMoeda(pend)}" style="font-weight:700;background:#ece5da;color:#3a2a1a;pointer-events:none"></div><div><label>Valor pago (R$)</label><input id="pgV" type="text" inputmode="numeric" class="moeda" value="${fmtMoeda(pend)}"></div></div>
+  <div class="row"><div><label>Desconto (R$)</label><input id="pgDs" type="text" inputmode="numeric" class="moeda" value=""></div><div><label>Valor residual (R$)</label><input id="pgRd" type="text" readonly tabindex="-1" value="" style="font-weight:700;background:#ece5da;pointer-events:none"></div></div>
   <p id="pgRs" style="margin:6px 0 0;font-weight:700"></p>`}${ed?`<label>Valor (R$)</label><input id="pgV" type="text" inputmode="numeric" class="moeda" value="${fmtMoeda(ed.valor)}">`:''}
   ${campoPagador('pg',ed&&ed.pagador,ed&&ed.conta)}
   <label>Observação</label><textarea id="pgO" rows="2">${esc(ed?ed.obs||'':'')}</textarea>
   <div class="btRow">${ed?'<button class="bt amar" id="pgE">Estornar</button>':''}<button class="bt verm" id="pgN">Cancelar</button><button class="bt verde" id="pgS">Salvar</button></div></div>`;
   document.body.appendChild(m);m.querySelector('#pgN').onclick=()=>m.remove();
-  const rsto=()=>{const r=$('#pgRs');if(!r)return;const ds=r2(mv('pgDs')),v=r2(mv('pgV')),f=r2(pend-ds-v);r.innerHTML=f>0.004?`<span style="color:var(--err)">Fica à pagar: ${R$(f)}</span>`:f<-0.004?`<span style="color:var(--err)">Desconto + valor pago passam do à pagar em ${R$(-f)}</span>`:`<span style="color:var(--ok)">Quita a fatura${ds?' (com desconto de '+R$(ds)+')':''}</span>`};
-  if(!ed){m.querySelector('#pgDs').addEventListener('input',()=>{const ds=r2(mv('pgDs'));$('#pgV').value=fmtMoeda(Math.max(r2(pend-ds),0));rsto()});m.querySelector('#pgV').addEventListener('input',rsto);rsto()}
+  const rsto=()=>{const r=$('#pgRs'),rd=$('#pgRd');if(!r)return;const ds=r2(mv('pgDs')),v=r2(mv('pgV')),f=r2(pend-ds-v);
+    rd.value=f<-0.004?'− '+fmtMoeda(-f):(f>0.004?fmtMoeda(f):'R$ 0,00');rd.style.color=f>0.004||f<-0.004?'var(--err)':'var(--ok)';
+    r.innerHTML=f>0.004?`<span style="color:var(--err)">Ao salvar, o residual de ${R$(f)} fica à pagar. Para quitar, coloque esse valor no desconto.</span>`:f<-0.004?`<span style="color:var(--err)">Valor pago + desconto passam do valor a pagar em ${R$(-f)}</span>`:`<span style="color:var(--ok)">Quita a fatura${ds?' (com desconto de '+R$(ds)+')':''}</span>`};
+  if(!ed){m.querySelector('#pgDs').addEventListener('input',rsto);m.querySelector('#pgV').addEventListener('input',rsto);rsto()}
   if(ed)m.querySelector('#pgE').onclick=()=>{m.remove();delPag(ed.id)};
   m.querySelector('#pgS').onclick=()=>{const v=r2(mv('pgV')),ds=ed?0:r2(mv('pgDs')),dt=$('#pgD').value;if(!dt)return toast('Informe a data');if(!(v>0))return toast('Informe o valor pago');
     if(ds>pend+0.004)return toast('Desconto maior que o à pagar ('+R$(pend)+')');if(v+ds>pend+0.004)return toast('Desconto + valor pago maior que o à pagar ('+R$(pend)+')');const pc=lerPagador('pg');if(!pc.conta)return toast('Informe a conta de pagamento');
